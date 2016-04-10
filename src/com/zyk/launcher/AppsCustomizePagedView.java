@@ -30,19 +30,19 @@ import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Rect;
-import android.graphics.Region;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Process;
+import android.support.v4.view.ViewCompat;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Gravity;
-import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -50,10 +50,9 @@ import android.view.ViewGroup;
 import android.view.animation.AccelerateInterpolator;
 import android.widget.GridLayout;
 import android.widget.ImageView;
-import android.widget.TextView;
 import android.widget.Toast;
 
-import com.zyk.launcher.DropTarget.DragObject;
+import com.zyk.launcher.alarm.OnAlarmListener;
 import com.zyk.launcher.compat.AppWidgetManagerCompat;
 import com.zyk.launcher.util.DragUtils;
 import com.zyk.launcher.util.Utils;
@@ -172,7 +171,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     private ContentType mContentType = ContentType.Applications;
 
     // Refs
-    private Launcher mLauncher;
+//    private Launcher mLauncher;
     private DragController mDragController;
     private final LayoutInflater mLayoutInflater;
     private final PackageManager mPackageManager;
@@ -251,7 +250,6 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
             setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
         }
         setSinglePageInViewport();
-
         DeviceProfile grid = LauncherAppState.getInstance().getDynamicGrid().getDeviceProfile();
         mMaxDistanceForFolderCreation = (0.55f * grid.iconSizePx);
         mDragUtils = new DragUtils(mLauncher, this);
@@ -265,6 +263,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         Context context = getContext();
         Resources r = context.getResources();
         setDragSlopeThreshold(r.getInteger(R.integer.config_appsCustomizeDragSlopeThreshold) / 100f);
+
     }
 
     public void onFinishInflate() {
@@ -1647,6 +1646,8 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     private ShortcutAndWidgetContainer mDragSourceInternal;
     private boolean mCreateUserFolderOnDrop = false;
     private float[] mDragViewVisualCenter = new float[2];
+    private Matrix mTempInverseMatrix = new Matrix();
+    private float[] mTempCellLayoutCenterCoordinates = new float[2];
     private final DragUtils mDragUtils;
     /**
      * The CellLayout that is currently being dragged over
@@ -1688,23 +1689,22 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     public void onDragEnter(DragObject dragObject) {
         System.out.println("AppsCustomizePagedView onDragEnter");
 //        mDragEnforcer.onDragEnter();
-//        mCreateUserFolderOnDrop = false;
+        mCreateUserFolderOnDrop = false;
 //        mAddToExistingFolderOnDrop = false;
-//
-//        mDropToLayout = null;
-//        CellLayout layout = getCurrentDropLayout();
-//        setCurrentDropLayout(layout);
-//        setCurrentDragOverlappingLayout(layout);
-//
-//        if (!workspaceInModalState()) {
-//            mLauncher.getDragLayer().showPageHints();
-//        }
+
+        mDropToLayout = null;
+        CellLayout layout = getCurrentDropLayout();
+        setCurrentDropLayout(layout);
+        setCurrentDragOverlappingLayout(layout);
+
+        if (!workspaceInModalState()) {
+            mLauncher.getDragLayer().showPageHints();
+        }
     }
 
     @Override
     public void onDragOver(DragObject d) {
-        if (mInScrollArea || !transitionStateShouldAllowDrop()) return;
-
+//        if (mInScrollArea || !transitionStateShouldAllowDrop()) return;
         Rect r = new Rect();
         CellLayout layout = null;
         ItemInfo item = (ItemInfo) d.dragInfo;
@@ -1805,8 +1805,8 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
                         mTargetCell[0], mTargetCell[1], item.spanX, item.spanY, false,
                         d.dragView.getDragVisualizeOffset(), d.dragView.getDragRegion());
             } else if ((mDragUtils.mDragMode == DragUtils.DRAG_MODE_NONE || mDragUtils.mDragMode == DragUtils.DRAG_MODE_REORDER)
-                    && !mDragUtils.mReorderAlarm.alarmPending() && (mLastReorderX != reorderX ||
-                    mLastReorderY != reorderY)) {
+                    && !mDragUtils.mReorderAlarm.alarmPending() && (mDragUtils.mLastReorderX != reorderX ||
+                    mDragUtils.mLastReorderY != reorderY)) {
 
                 int[] resultSpan = new int[2];
                 mDragTargetLayout.performReorder((int) mDragViewVisualCenter[0],
@@ -1898,17 +1898,18 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     }
 
     void setCurrentDropLayout(CellLayout layout) {
-//        if (mDragTargetLayout != null) {
-//            mDragTargetLayout.revertTempState();
-//            mDragTargetLayout.onDragExit();
-//        }
-//        mDragTargetLayout = layout;
-//        if (mDragTargetLayout != null) {
-//            mDragTargetLayout.onDragEnter();
-//        }
-//        mDragUtils.cleanupReorder(true);
-//        mDragUtils.cleanupFolderCreation();
-//        setCurrentDropOverCell(-1, -1);
+        if (mDragTargetLayout != null) {
+            mDragTargetLayout.revertTempState();
+            mDragTargetLayout.onDragExit();
+        }
+        mDragTargetLayout = layout;
+        System.out.println("AppsCustomizePagedView mDragTargetLayout:" + mDragTargetLayout);
+        if (mDragTargetLayout != null) {
+            mDragTargetLayout.onDragEnter();
+        }
+        mDragUtils.cleanupReorder(true);
+        mDragUtils.cleanupFolderCreation();
+        setCurrentDropOverCell(-1, -1);
     }
 
     void startDrag(CellLayout.CellInfo cellInfo) {
@@ -2042,9 +2043,9 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
         for (int i = 0; i < screenCount; i++) {
             // The custom content screen is not a valid drag over option
-            if (mScreenOrder.get(i) == Workspace.CUSTOM_CONTENT_SCREEN_ID) {
-                continue;
-            }
+//            if (mScreenOrder.get(i) == Workspace.CUSTOM_CONTENT_SCREEN_ID) {
+//                continue;
+//            }
 
             CellLayout cl = (CellLayout) getChildAt(i);
 
@@ -2101,38 +2102,36 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     private void manageFolderFeedback(ItemInfo info, CellLayout targetLayout,
                                       int[] targetCell, float distance, View dragOverView) {
-        boolean userFolderPending = willCreateUserFolder(info, targetLayout, targetCell, distance,
-                false);
-
-        if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_NONE && userFolderPending &&
-                !mDragUtils.mFolderCreationAlarm.alarmPending()) {
-            mDragUtils.mFolderCreationAlarm.setOnAlarmListener(new
-                    FolderCreationAlarmListener(targetLayout, targetCell[0], targetCell[1]));
+//        boolean userFolderPending = willCreateUserFolder(info, targetLayout, targetCell, distance,
+//                false);
+//        if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_NONE && userFolderPending &&
+//                !mDragUtils.mFolderCreationAlarm.alarmPending()) {
+            mDragUtils.mFolderCreationAlarm.setOnAlarmListener(mDragUtils.getNewFCAL(targetLayout, targetCell[0], targetCell[1]));
             mDragUtils.mFolderCreationAlarm.setAlarm(Workspace.FOLDER_CREATION_TIMEOUT);
             return;
-        }
-
-        boolean willAddToFolder =
-                willAddToExistingUserFolder(info, targetLayout, targetCell, distance);
-
-        if (willAddToFolder && mDragUtils.mDragMode == DragUtils.DRAG_MODE_NONE) {
-            mDragUtils.mDragOverFolderIcon = ((FolderIcon) dragOverView);
-            mDragUtils.mDragOverFolderIcon.onDragEnter(info);
-            if (targetLayout != null) {
-                targetLayout.clearDragOutlines();
-            }
-            mDragUtils.setDragMode(DragUtils.DRAG_MODE_ADD_TO_FOLDER);
-            return;
-        }
-
-        if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_ADD_TO_FOLDER && !willAddToFolder) {
-            mDragUtils.setDragMode(DragUtils.DRAG_MODE_NONE);
-        }
-        if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_CREATE_FOLDER && !userFolderPending) {
-            mDragUtils.setDragMode(DragUtils.DRAG_MODE_NONE);
-        }
-
-        return;
+//        }
+//
+//        boolean willAddToFolder =
+//                willAddToExistingUserFolder(info, targetLayout, targetCell, distance);
+//
+//        if (willAddToFolder && mDragUtils.mDragMode == DragUtils.DRAG_MODE_NONE) {
+//            mDragUtils.mDragOverFolderIcon = ((FolderIcon) dragOverView);
+//            mDragUtils.mDragOverFolderIcon.onDragEnter(info);
+//            if (targetLayout != null) {
+//                targetLayout.clearDragOutlines();
+//            }
+//            mDragUtils.setDragMode(DragUtils.DRAG_MODE_ADD_TO_FOLDER);
+//            return;
+//        }
+//
+//        if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_ADD_TO_FOLDER && !willAddToFolder) {
+//            mDragUtils.setDragMode(DragUtils.DRAG_MODE_NONE);
+//        }
+//        if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_CREATE_FOLDER && !userFolderPending) {
+//            mDragUtils.setDragMode(DragUtils.DRAG_MODE_NONE);
+//        }
+//
+//        return;
     }
 
     boolean willCreateUserFolder(ItemInfo info, CellLayout target, int[] targetCell, float
@@ -2197,30 +2196,25 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         return mState != Workspace.State.NORMAL;
     }
 
-    class FolderCreationAlarmListener implements OnAlarmListener {
-        CellLayout layout;
-        int cellX;
-        int cellY;
+    private void setState(Workspace.State state) {
+        mState = state;
+        updateInteractionForState();
+        updateAccessibilityFlags();
+    }
 
-        public FolderCreationAlarmListener(CellLayout layout, int cellX, int cellY) {
-            this.layout = layout;
-            this.cellX = cellX;
-            this.cellY = cellY;
+    public void updateInteractionForState() {
+        if (mState != Workspace.State.NORMAL) {
+            mLauncher.onInteractionBegin();
+        } else {
+            mLauncher.onInteractionEnd();
         }
+    }
 
-        public void onAlarm(Alarm alarm) {
-            if (mDragUtils.mDragFolderRingAnimator != null) {
-                // This shouldn't happen ever, but just in case, make sure we clean up the mess.
-                mDragUtils.mDragFolderRingAnimator.animateToNaturalState();
-            }
-            mDragUtils.mDragFolderRingAnimator = new FolderIcon.FolderRingAnimator(mLauncher, null);
-            mDragUtils.mDragFolderRingAnimator.setCell(cellX, cellY);
-            mDragUtils.mDragFolderRingAnimator.setCellLayout(layout);
-            mDragUtils.mDragFolderRingAnimator.animateToAcceptState();
-            layout.showFolderAccept(mDragUtils.mDragFolderRingAnimator);
-            layout.clearDragOutlines();
-            mDragUtils.setDragMode(mDragUtils.DRAG_MODE_CREATE_FOLDER);
-        }
+    private void updateAccessibilityFlags() {
+        int accessible = mState == Workspace.State.NORMAL ?
+                ViewCompat.IMPORTANT_FOR_ACCESSIBILITY_YES :
+                ViewCompat.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS;
+        setImportantForAccessibility(accessible);
     }
 
     class ReorderAlarmListener implements OnAlarmListener {

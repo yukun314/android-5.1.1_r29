@@ -49,6 +49,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.zyk.launcher.FolderInfo.FolderListener;
+import com.zyk.launcher.alarm.OnAlarmListener;
 
 import java.util.ArrayList;
 import java.util.Collections;

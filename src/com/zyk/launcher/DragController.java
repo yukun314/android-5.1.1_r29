@@ -490,7 +490,6 @@ public class DragController {
         DropTarget dropTarget = findDropTarget(x, y, coordinates);
         mDragObject.x = coordinates[0];
         mDragObject.y = coordinates[1];
-        System.out.println("handleMoveEvent dropTarget:"+dropTarget);
         checkTouchMove(dropTarget);
 
         // Check if we are hovering over the scroll areas
@@ -700,11 +699,9 @@ public class DragController {
                 continue;
 
             target.getHitRectRelativeToDragLayer(r);
-            System.out.println("handleMoveEvent findDropTarget r1:" + r+" x:"+x+" y:"+y);
             mDragObject.x = x;
             mDragObject.y = y;
             if (r.contains(x, y)) {
-                System.out.println("handleMoveEvent==============================================================");
                 dropCoordinates[0] = x;
                 dropCoordinates[1] = y;
                 mLauncher.getDragLayer().mapCoordInSelfToDescendent((View) target, dropCoordinates);

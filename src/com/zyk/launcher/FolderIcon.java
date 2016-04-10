@@ -43,6 +43,7 @@ import android.widget.TextView;
 
 import com.zyk.launcher.DropTarget.DragObject;
 import com.zyk.launcher.FolderInfo.FolderListener;
+import com.zyk.launcher.alarm.OnAlarmListener;
 
 import java.util.ArrayList;
 
@@ -195,6 +196,7 @@ public class FolderIcon extends FrameLayout implements FolderListener {
         public float mOuterRingSize;
         public float mInnerRingSize;
         public FolderIcon mFolderIcon = null;
+        //预览的创建文件夹 视图
         public static Drawable sSharedOuterRingDrawable = null;
         public static Drawable sSharedInnerRingDrawable = null;
         public static int sPreviewSize = -1;

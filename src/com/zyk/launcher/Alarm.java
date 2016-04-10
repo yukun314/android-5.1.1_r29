@@ -18,6 +18,8 @@ package com.zyk.launcher;
 
 import android.os.Handler;
 
+import com.zyk.launcher.alarm.OnAlarmListener;
+
 public class Alarm implements Runnable{
     // if we reach this time and the alarm hasn't been cancelled, call the listener
     private long mAlarmTriggerTime;

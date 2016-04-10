@@ -100,7 +100,6 @@ public class AllAppsButton extends TextView implements DropTarget, DragControlle
     @Override
     public void getHitRectRelativeToDragLayer(Rect outRect) {
         super.getHitRect(outRect);
-        System.out.println("allAppsButton getHitRectRelativeToDragLayer");
         outRect.bottom += mBottomDragPadding;
 
         int[] coords = new int[2];

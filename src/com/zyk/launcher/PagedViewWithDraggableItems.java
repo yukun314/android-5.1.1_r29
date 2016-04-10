@@ -37,7 +37,7 @@ public abstract class PagedViewWithDraggableItems extends PagedView
     private boolean mIsDragging;
     private boolean mIsDragEnabled;
     private float mDragSlopeThreshold;
-    private Launcher mLauncher;
+    Launcher mLauncher;
 
     public boolean isLongClicked = false;
 

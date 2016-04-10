@@ -17,6 +17,7 @@
 package com.zyk.launcher;
 
 import android.content.Context;
+import android.graphics.Canvas;
 import android.view.View;
 
 public class AppsCustomizeCellLayout extends CellLayout implements Page {
@@ -67,5 +68,11 @@ public class AppsCustomizeCellLayout extends CellLayout implements Page {
         for (int j = 0; j < childCount; ++j) {
             children.getChildAt(j).setOnKeyListener(null);
         }
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        System.out.println("cellLayout onDraw");
+        super.onDraw(canvas);
     }
 }

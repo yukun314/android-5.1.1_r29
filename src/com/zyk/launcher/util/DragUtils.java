@@ -19,6 +19,7 @@ import com.zyk.launcher.LauncherAppWidgetInfo;
 import com.zyk.launcher.LauncherSettings;
 import com.zyk.launcher.R;
 import com.zyk.launcher.ShortcutInfo;
+import com.zyk.launcher.alarm.OnAlarmListener;
 import com.zyk.launcher.backup.BackupProtos;
 
 /**
@@ -192,6 +193,37 @@ public class DragUtils {
                                   int spanX, int spanY, CellLayout layout, int[] recycle) {
         return layout.findNearestArea(
                 pixelX, pixelY, spanX, spanY, recycle);
+    }
+
+    public FolderCreationAlarmListener getNewFCAL(CellLayout layout, int cellX, int cellY){
+        return new FolderCreationAlarmListener(layout, cellX, cellY);
+    }
+
+    public class FolderCreationAlarmListener implements OnAlarmListener {
+        CellLayout layout;
+        int cellX;
+        int cellY;
+
+        public FolderCreationAlarmListener(CellLayout layout, int cellX, int cellY) {
+            System.out.println("layout:"+layout);
+            this.layout = layout;
+            this.cellX = cellX;
+            this.cellY = cellY;
+        }
+
+        public void onAlarm(Alarm alarm) {
+            if (mDragFolderRingAnimator != null) {
+                // This shouldn't happen ever, but just in case, make sure we clean up the mess.
+                mDragFolderRingAnimator.animateToNaturalState();
+            }
+            mDragFolderRingAnimator = new FolderIcon.FolderRingAnimator(mLauncher, null);
+            mDragFolderRingAnimator.setCell(cellX, cellY);
+            mDragFolderRingAnimator.setCellLayout(layout);
+            mDragFolderRingAnimator.animateToAcceptState();
+            layout.showFolderAccept(mDragFolderRingAnimator);
+            layout.clearDragOutlines();
+            setDragMode(DRAG_MODE_CREATE_FOLDER);
+        }
     }
 
 }

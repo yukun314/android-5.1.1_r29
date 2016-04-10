@@ -458,6 +458,7 @@ public class CellLayout extends ViewGroup {
         // The folder outer / inner ring image(s)
         LauncherAppState app = LauncherAppState.getInstance();
         DeviceProfile grid = app.getDynamicGrid().getDeviceProfile();
+        System.out.println("cellLayout mFolderOuterRings:"+mFolderOuterRings.size());
         for (int i = 0; i < mFolderOuterRings.size(); i++) {
             FolderRingAnimator fra = mFolderOuterRings.get(i);
 
@@ -465,12 +466,12 @@ public class CellLayout extends ViewGroup {
             int width, height;
             cellToPoint(fra.mCellX, fra.mCellY, mTempLocation);
             View child = getChildAt(fra.mCellX, fra.mCellY);
-
+            System.out.println("cellLayout child is null:"+(child == null));
             if (child != null) {
                 int centerX = mTempLocation[0] + mCellWidth / 2;
                 int centerY = mTempLocation[1] + previewOffset / 2 +
                         child.getPaddingTop() + grid.folderBackgroundOffset;
-
+                System.out.println("cellLayout ondraw :"+FolderIcon.HAS_OUTER_RING);
                 // Draw outer ring, if it exists
                 if (FolderIcon.HAS_OUTER_RING) {
                     d = FolderRingAnimator.sSharedOuterRingDrawable;

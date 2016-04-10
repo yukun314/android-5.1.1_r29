@@ -31,10 +31,7 @@ import android.appwidget.AppWidgetHostView;
 import android.appwidget.AppWidgetProviderInfo;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
@@ -44,7 +41,6 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Rect;
-import android.graphics.Region.Op;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -65,10 +61,10 @@ import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
 import android.widget.TextView;
 
-import com.zyk.launcher.FolderIcon.FolderRingAnimator;
 import com.zyk.launcher.Launcher.CustomContentCallbacks;
 import com.zyk.launcher.Launcher.LauncherOverlay;
 import com.zyk.launcher.LauncherSettings.Favorites;
+import com.zyk.launcher.alarm.OnAlarmListener;
 import com.zyk.launcher.compat.PackageInstallerCompat;
 import com.zyk.launcher.compat.PackageInstallerCompat.PackageInstallInfo;
 import com.zyk.launcher.compat.UserHandleCompat;
@@ -79,8 +75,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -2223,6 +2217,7 @@ public class Workspace extends SmoothPagedView
 
     Animator getChangeStateAnimation(final State state, boolean animated, int delay, int snapPage,
             ArrayList<View> layerViews) {
+        System.out.println("workspace getChangeStateAnimation");
         if (mState == state) {
             return null;
         }
@@ -2249,7 +2244,6 @@ public class Workspace extends SmoothPagedView
         final boolean oldStateIsNormalHidden = (oldState == State.NORMAL_HIDDEN);
         final boolean oldStateIsOverviewHidden = (oldState == State.OVERVIEW_HIDDEN);
         final boolean oldStateIsOverview = (oldState == State.OVERVIEW);
-        System.out.println("mState:"+mState+" state:"+state);
         setState(state);
         final boolean stateIsNormal = (state == State.NORMAL);
         final boolean stateIsSpringLoaded = (state == State.SPRING_LOADED);
@@ -2863,6 +2857,9 @@ public class Workspace extends SmoothPagedView
         return true;
     }
 
+    /**
+     * 判断是否要创建文件夹
+     */
     boolean willCreateUserFolder(ItemInfo info, CellLayout target, int[] targetCell, float
             distance, boolean considerTimeout) {
         if (distance > mMaxDistanceForFolderCreation) return false;
@@ -3222,7 +3219,6 @@ public class Workspace extends SmoothPagedView
         mDragEnforcer.onDragEnter();
         mCreateUserFolderOnDrop = false;
         mAddToExistingFolderOnDrop = false;
-
         mDropToLayout = null;
         CellLayout layout = getCurrentDropLayout();
         setCurrentDropLayout(layout);
@@ -3313,6 +3309,7 @@ public class Workspace extends SmoothPagedView
             mDragTargetLayout.onDragExit();
         }
         mDragTargetLayout = layout;
+        System.out.println("workspace mDragTargetLayout:"+mDragTargetLayout);
         if (mDragTargetLayout != null) {
             mDragTargetLayout.onDragEnter();
         }
@@ -3438,6 +3435,7 @@ public class Workspace extends SmoothPagedView
                 layout = findMatchingPageForDragOver(d.dragView, d.x, d.y, false);
             }
             if (layout != mDragTargetLayout) {
+                System.out.println("workspace setCurrenDropLayout");
                 setCurrentDropLayout(layout);
                 setCurrentDragOverlappingLayout(layout);
 
@@ -3461,11 +3459,12 @@ public class Workspace extends SmoothPagedView
                 layout = getCurrentDropLayout();
             }
             if (layout != mDragTargetLayout) {
+                System.out.println("workspace setCurrenDropLayout");
                 setCurrentDropLayout(layout);
                 setCurrentDragOverlappingLayout(layout);
             }
         }
-
+        System.out.println("mDragTargetLayout is null:"+(mDragTargetLayout == null));
         // Handle the drag over
         if (mDragTargetLayout != null) {
             // We want the point to be mapped to the dragTarget.
@@ -3513,7 +3512,6 @@ public class Workspace extends SmoothPagedView
             } else if ((mDragUtils.mDragMode == DragUtils.DRAG_MODE_NONE || mDragUtils.mDragMode == DragUtils.DRAG_MODE_REORDER)
                     && !mDragUtils.mReorderAlarm.alarmPending() && (mDragUtils.mLastReorderX != reorderX ||
                     mDragUtils.mLastReorderY != reorderY)) {
-
                 int[] resultSpan = new int[2];
                 mDragTargetLayout.performReorder((int) mDragViewVisualCenter[0],
                         (int) mDragViewVisualCenter[1], minSpanX, minSpanY, item.spanX, item.spanY,
@@ -3540,11 +3538,10 @@ public class Workspace extends SmoothPagedView
             int[] targetCell, float distance, View dragOverView) {
         boolean userFolderPending = willCreateUserFolder(info, targetLayout, targetCell, distance,
                 false);
-
+        //创建文件夹 视觉上
         if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_NONE && userFolderPending &&
                 !mDragUtils.mFolderCreationAlarm.alarmPending()) {
-            mDragUtils.mFolderCreationAlarm.setOnAlarmListener(new
-                    FolderCreationAlarmListener(targetLayout, targetCell[0], targetCell[1]));
+            mDragUtils.mFolderCreationAlarm.setOnAlarmListener(mDragUtils.getNewFCAL(targetLayout, targetCell[0], targetCell[1]));
             mDragUtils.mFolderCreationAlarm.setAlarm(FOLDER_CREATION_TIMEOUT);
             return;
         }
@@ -3553,6 +3550,7 @@ public class Workspace extends SmoothPagedView
                 willAddToExistingUserFolder(info, targetLayout, targetCell, distance);
 
         if (willAddToFolder && mDragUtils.mDragMode == DragUtils.DRAG_MODE_NONE) {
+            System.out.println("itemInfo:"+info+"\n cellLayout:"+targetCell+"\ntargetCell[]:"+targetCell+"\ndistance:"+distance+"\ndragOverView:"+dragOverView);
             mDragUtils.mDragOverFolderIcon = ((FolderIcon) dragOverView);
             mDragUtils.mDragOverFolderIcon.onDragEnter(info);
             if (targetLayout != null) {
@@ -3570,32 +3568,6 @@ public class Workspace extends SmoothPagedView
         }
 
         return;
-    }
-
-    class FolderCreationAlarmListener implements OnAlarmListener {
-        CellLayout layout;
-        int cellX;
-        int cellY;
-
-        public FolderCreationAlarmListener(CellLayout layout, int cellX, int cellY) {
-            this.layout = layout;
-            this.cellX = cellX;
-            this.cellY = cellY;
-        }
-
-        public void onAlarm(Alarm alarm) {
-            if (mDragUtils.mDragFolderRingAnimator != null) {
-                // This shouldn't happen ever, but just in case, make sure we clean up the mess.
-                mDragUtils.mDragFolderRingAnimator.animateToNaturalState();
-            }
-            mDragUtils.mDragFolderRingAnimator = new FolderRingAnimator(mLauncher, null);
-            mDragUtils.mDragFolderRingAnimator.setCell(cellX, cellY);
-            mDragUtils.mDragFolderRingAnimator.setCellLayout(layout);
-            mDragUtils.mDragFolderRingAnimator.animateToAcceptState();
-            layout.showFolderAccept(mDragUtils.mDragFolderRingAnimator);
-            layout.clearDragOutlines();
-            mDragUtils.setDragMode(mDragUtils.DRAG_MODE_CREATE_FOLDER);
-        }
     }
 
     class ReorderAlarmListener implements OnAlarmListener {

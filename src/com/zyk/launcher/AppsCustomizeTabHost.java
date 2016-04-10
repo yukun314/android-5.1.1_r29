@@ -205,12 +205,10 @@ public class AppsCustomizeTabHost extends FrameLayout implements LauncherTransit
         if (parent == null) return;
 
         View overviewPanel = ((Launcher) getContext()).getOverviewPanel();
-        System.out.println("overViewPanel:"+overviewPanel);
         final int count = parent.getChildCount();
         if (!isChildrenDrawingOrderEnabled()) {
             for (int i = 0; i < count; i++) {
                 final View child = parent.getChildAt(i);
-                System.out.println("child:"+child);
                 if (child == this) {
                     break;
                 } else {

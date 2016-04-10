@@ -16,6 +16,8 @@
 
 package com.zyk.launcher;
 
+import com.zyk.launcher.alarm.OnAlarmListener;
+
 /**
  * 控制当Launcher处于State.APPS_CUSTOMIZE_SPRING_LOADED状态时，即处于缩小状
  * 态时，提供控制Launcher进行滑动、放置item的操作

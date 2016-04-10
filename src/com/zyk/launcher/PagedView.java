@@ -481,6 +481,7 @@ public abstract class PagedView extends ViewGroup implements ViewGroup.OnHierarc
     }
 
     int getNextPage() {
+        System.out.println(""+(mNextPage != INVALID_PAGE));
         return (mNextPage != INVALID_PAGE) ? mNextPage : mCurrentPage;
     }
 

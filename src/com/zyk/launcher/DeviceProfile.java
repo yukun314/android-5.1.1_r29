@@ -666,7 +666,6 @@ public class DeviceProfile {
                 padding.set(availableWidth / 2, paddingTop + availableHeight / 2,
                         availableWidth / 2, paddingBottom + availableHeight / 2);
             } else {
-                System.out.println("else");
                 // FIXME AllApps上面添加导航 这个方法都需要修改
                 int top  = 5;
                 int bottom = hotseatBarHeightPx;
