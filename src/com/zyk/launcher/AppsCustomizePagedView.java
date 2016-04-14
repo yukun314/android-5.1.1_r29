@@ -1791,7 +1791,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
             final View dragOverView = mDragTargetLayout.getChildAt(mTargetCell[0],
                     mTargetCell[1]);
-
+            System.out.println("mTargetCell:"+mTargetCell[0]+" "+mTargetCell[1]);
             manageFolderFeedback(info, mDragTargetLayout, mTargetCell,
                     targetCellDistance, dragOverView);
 
