@@ -1719,7 +1719,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         if (item.spanX < 0 || item.spanY < 0) throw new RuntimeException("Improper spans found");
         mDragViewVisualCenter = mDragUtils.getDragViewVisualCenter(d.x, d.y, d.xOffset, d.yOffset,
                 d.dragView, mDragViewVisualCenter, getResources());
-
+        System.out.println("AppsCustomizePagedView mDragViewVisualCenter:"+mDragViewVisualCenter[0]+"  "+mDragViewVisualCenter[1]+" d:"+d.toString());
         final View child = (mDragInfo == null) ? null : mDragInfo.cell;
         // Identify whether we have dragged over a side page
         if (workspaceInModalState()) {
@@ -1763,6 +1763,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         // Handle the drag over
         if (mDragTargetLayout != null) {
             // We want the point to be mapped to the dragTarget.
+            System.out.println("AppsCustomizePagedView1 mDragViewVisualCenter:"+mDragViewVisualCenter[0]+"  "+mDragViewVisualCenter[1]);
             if (mLauncher.isHotseatLayout(mDragTargetLayout)) {
                 mDragUtils.mapPointFromSelfToHotseatLayout(mLauncher.getHotseat(), mDragViewVisualCenter);
             } else {
@@ -1777,7 +1778,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
                 minSpanX = item.minSpanX;
                 minSpanY = item.minSpanY;
             }
-
+            System.out.println("AppsCustomizePagedView2 mDragViewVisualCenter:"+mDragViewVisualCenter[0]+"  "+mDragViewVisualCenter[1]);
             mTargetCell = mDragUtils.findNearestArea((int) mDragViewVisualCenter[0],
                     (int) mDragViewVisualCenter[1], minSpanX, minSpanY,
                     mDragTargetLayout, mTargetCell);
@@ -1791,7 +1792,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
             final View dragOverView = mDragTargetLayout.getChildAt(mTargetCell[0],
                     mTargetCell[1]);
-            System.out.println("mTargetCell:"+mTargetCell[0]+" "+mTargetCell[1]);
+            System.out.println("AppsCustomizePagedView mTargetCell:"+mTargetCell[0]+" "+mTargetCell[1]);
             manageFolderFeedback(info, mDragTargetLayout, mTargetCell,
                     targetCellDistance, dragOverView);
 

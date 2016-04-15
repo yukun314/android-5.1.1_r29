@@ -399,25 +399,29 @@ public class DeviceProfile {
         // All Apps
         allAppsCellWidthPx = allAppsIconSizePx;
         allAppsCellHeightPx = allAppsIconSizePx + drawablePadding + iconTextSizePx;
-        int maxLongEdgeCellCount =
-                resources.getInteger(R.integer.config_dynamic_grid_max_long_edge_cell_count);
-        int maxShortEdgeCellCount =
-                resources.getInteger(R.integer.config_dynamic_grid_max_short_edge_cell_count);
+//        int maxLongEdgeCellCount =
+//                resources.getInteger(R.integer.config_dynamic_grid_max_long_edge_cell_count);
+//        int maxShortEdgeCellCount =
+//                resources.getInteger(R.integer.config_dynamic_grid_max_short_edge_cell_count);
         int minEdgeCellCount =
                 resources.getInteger(R.integer.config_dynamic_grid_min_edge_cell_count);
-        int maxRows = (isLandscape ? maxShortEdgeCellCount : maxLongEdgeCellCount);
-        int maxCols = (isLandscape ? maxLongEdgeCellCount : maxShortEdgeCellCount);
 
+//        int maxRows = (isLandscape ? maxShortEdgeCellCount : maxLongEdgeCellCount);
+//        int maxCols = (isLandscape ? maxLongEdgeCellCount : maxShortEdgeCellCount);
+        //maxRowa = maxLongEdgeCellCount 影响了结果的正确
+        //maxCols = maxShortEdgeCellCount
         if (allAppsShortEdgeCount > 0 && allAppsLongEdgeCount > 0) {
             allAppsNumRows = isLandscape ? allAppsShortEdgeCount : allAppsLongEdgeCount;
             allAppsNumCols = isLandscape ? allAppsLongEdgeCount : allAppsShortEdgeCount;
         } else {
-            allAppsNumRows = (availableHeightPx - pageIndicatorHeightPx) /
+            allAppsNumRows = (availableHeightPx - pageIndicatorHeightPx - hotseatBarHeightPx) /
                     (allAppsCellHeightPx + allAppsCellPaddingPx);
-            allAppsNumRows = Math.max(minEdgeCellCount, Math.min(maxRows, allAppsNumRows));
+//            allAppsNumRows = Math.max(minEdgeCellCount, Math.min(maxRows, allAppsNumRows));
+            allAppsNumRows = Math.max(minEdgeCellCount, allAppsNumRows);
             allAppsNumCols = (availableWidthPx) /
                     (allAppsCellWidthPx + allAppsCellPaddingPx);
-            allAppsNumCols = Math.max(minEdgeCellCount, Math.min(maxCols, allAppsNumCols));
+//            allAppsNumCols = Math.max(minEdgeCellCount, Math.min(4, allAppsNumCols));
+            allAppsNumCols = Math.max(minEdgeCellCount, allAppsNumCols);
         }
     }
 

@@ -65,6 +65,13 @@ public interface DropTarget {
 
         public DragObject() {
         }
+
+        @Override
+        public String toString() {
+            String str="x="+x+"  y="+y+"  xOffset="+xOffset+"  yOffset="+yOffset+"  dragView:"+dragView.getDragRegion();
+            return str;
+//            return super.toString();
+        }
     }
 
     public static class DragEnforcer implements DragController.DragListener {
