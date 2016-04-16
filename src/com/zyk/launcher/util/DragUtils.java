@@ -174,7 +174,7 @@ public class DragUtils {
      *
      */
     public void mapPointFromSelfToChild(View v, float[] xy, Matrix cachedInverseMatrix) {
-        System.out.println("AppsCustomizePagedView v.getLeft:"+v.getLeft()+"  v.getTop:"+v.getTop()+"  v.getRight:"+v.getRight()+"  v.getBottom:"+v.getBottom());
+        System.out.println("padding AppsCustomizePagedView v.getLeft:"+v.getLeft()+"  v.getTop:"+v.getTop()+"  v.getRight:"+v.getRight()+"  v.getBottom:"+v.getBottom());
         xy[0] = xy[0] - v.getLeft();
         xy[1] = xy[1] - v.getTop();
     }

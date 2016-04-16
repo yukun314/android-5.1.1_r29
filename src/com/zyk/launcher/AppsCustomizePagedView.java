@@ -376,7 +376,21 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     }
 
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
+        System.out.println("padding 1 appsCustomizePageView++++++++++++++++++++++++++++++++++++++");
+        int count = getChildCount();
+        for(int i = 0;i<count;i++){
+            View child = getChildAt(i);
+            System.out.println("padding 1 PageView index:"+i+"   "+child+"  "+child.getLeft()+"  "+child.getTop()+"  "+child.getRight()+"  "+ child.getBottom());
+        }
+        System.out.println("padding appsCustomizePageView +++++++++++++++++++++++++++++++++++++");
         super.onLayout(changed, l, t, r, b);
+        count = getChildCount();
+        System.out.println("padding 2 appsCustomizePageView++++++++++++++++++++++++++++++++++++++");
+        for(int i = 0;i<count;i++){
+            View child = getChildAt(i);
+            System.out.println("padding PageView index:"+i+"   "+child+"  "+child.getLeft()+"  "+child.getTop()+"  "+child.getRight()+"  "+ child.getBottom());
+        }
+        System.out.println("padding 2 appsCustomizePageView +++++++++++++++++++++++++++++++++++++");
 
         if (!isDataReady()) {
             if ((LauncherAppState.isDisableAllApps() || !mApps.isEmpty()) && !mWidgets.isEmpty()) {
@@ -1387,8 +1401,10 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     // We want our pages to be z-ordered such that the further a page is to the left, the higher
     // it is in the z-order. This is important to insure touch events are handled correctly.
+    //FIXME 会有什么问题？
     View getPageAt(int index) {
-        return getChildAt(indexToPage(index));
+//        return getChildAt(indexToPage(index));
+        return getChildAt(index);
     }
 
     @Override
@@ -1719,7 +1735,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         if (item.spanX < 0 || item.spanY < 0) throw new RuntimeException("Improper spans found");
         mDragViewVisualCenter = mDragUtils.getDragViewVisualCenter(d.x, d.y, d.xOffset, d.yOffset,
                 d.dragView, mDragViewVisualCenter, getResources());
-        System.out.println("AppsCustomizePagedView mDragViewVisualCenter:"+mDragViewVisualCenter[0]+"  "+mDragViewVisualCenter[1]+" d:"+d.toString());
+
         final View child = (mDragInfo == null) ? null : mDragInfo.cell;
         // Identify whether we have dragged over a side page
         if (workspaceInModalState()) {
@@ -1763,7 +1779,6 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         // Handle the drag over
         if (mDragTargetLayout != null) {
             // We want the point to be mapped to the dragTarget.
-            System.out.println("AppsCustomizePagedView1 mDragViewVisualCenter:"+mDragViewVisualCenter[0]+"  "+mDragViewVisualCenter[1]);
             if (mLauncher.isHotseatLayout(mDragTargetLayout)) {
                 mDragUtils.mapPointFromSelfToHotseatLayout(mLauncher.getHotseat(), mDragViewVisualCenter);
             } else {
@@ -1778,7 +1793,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
                 minSpanX = item.minSpanX;
                 minSpanY = item.minSpanY;
             }
-            System.out.println("AppsCustomizePagedView2 mDragViewVisualCenter:"+mDragViewVisualCenter[0]+"  "+mDragViewVisualCenter[1]);
+
             mTargetCell = mDragUtils.findNearestArea((int) mDragViewVisualCenter[0],
                     (int) mDragViewVisualCenter[1], minSpanX, minSpanY,
                     mDragTargetLayout, mTargetCell);
@@ -1792,7 +1807,6 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
             final View dragOverView = mDragTargetLayout.getChildAt(mTargetCell[0],
                     mTargetCell[1]);
-            System.out.println("AppsCustomizePagedView mTargetCell:"+mTargetCell[0]+" "+mTargetCell[1]);
             manageFolderFeedback(info, mDragTargetLayout, mTargetCell,
                     targetCellDistance, dragOverView);
 
@@ -2089,6 +2103,12 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
      * screen while a scroll is in progress.
      */
     public CellLayout getCurrentDropLayout() {
+        int count = getChildCount();
+        for(int i =0;i<count;i++){
+            View view = getChildAt(i);
+            System.out.println("padding child:"+view+"  "+view.getLeft());
+        }
+        System.out.println("padding child :"+getNextPage());
         return (CellLayout) getChildAt(getNextPage());
     }
 
@@ -2103,36 +2123,36 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     private void manageFolderFeedback(ItemInfo info, CellLayout targetLayout,
                                       int[] targetCell, float distance, View dragOverView) {
-//        boolean userFolderPending = willCreateUserFolder(info, targetLayout, targetCell, distance,
-//                false);
-//        if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_NONE && userFolderPending &&
-//                !mDragUtils.mFolderCreationAlarm.alarmPending()) {
+        boolean userFolderPending = willCreateUserFolder(info, targetLayout, targetCell, distance,
+                false);
+        if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_NONE && userFolderPending &&
+                !mDragUtils.mFolderCreationAlarm.alarmPending()) {
             mDragUtils.mFolderCreationAlarm.setOnAlarmListener(mDragUtils.getNewFCAL(targetLayout, targetCell[0], targetCell[1]));
             mDragUtils.mFolderCreationAlarm.setAlarm(Workspace.FOLDER_CREATION_TIMEOUT);
             return;
-//        }
-//
-//        boolean willAddToFolder =
-//                willAddToExistingUserFolder(info, targetLayout, targetCell, distance);
-//
-//        if (willAddToFolder && mDragUtils.mDragMode == DragUtils.DRAG_MODE_NONE) {
-//            mDragUtils.mDragOverFolderIcon = ((FolderIcon) dragOverView);
-//            mDragUtils.mDragOverFolderIcon.onDragEnter(info);
-//            if (targetLayout != null) {
-//                targetLayout.clearDragOutlines();
-//            }
-//            mDragUtils.setDragMode(DragUtils.DRAG_MODE_ADD_TO_FOLDER);
-//            return;
-//        }
-//
-//        if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_ADD_TO_FOLDER && !willAddToFolder) {
-//            mDragUtils.setDragMode(DragUtils.DRAG_MODE_NONE);
-//        }
-//        if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_CREATE_FOLDER && !userFolderPending) {
-//            mDragUtils.setDragMode(DragUtils.DRAG_MODE_NONE);
-//        }
-//
-//        return;
+        }
+
+        boolean willAddToFolder =
+                willAddToExistingUserFolder(info, targetLayout, targetCell, distance);
+
+        if (willAddToFolder && mDragUtils.mDragMode == DragUtils.DRAG_MODE_NONE) {
+            mDragUtils.mDragOverFolderIcon = ((FolderIcon) dragOverView);
+            mDragUtils.mDragOverFolderIcon.onDragEnter(info);
+            if (targetLayout != null) {
+                targetLayout.clearDragOutlines();
+            }
+            mDragUtils.setDragMode(DragUtils.DRAG_MODE_ADD_TO_FOLDER);
+            return;
+        }
+
+        if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_ADD_TO_FOLDER && !willAddToFolder) {
+            mDragUtils.setDragMode(DragUtils.DRAG_MODE_NONE);
+        }
+        if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_CREATE_FOLDER && !userFolderPending) {
+            mDragUtils.setDragMode(DragUtils.DRAG_MODE_NONE);
+        }
+
+        return;
     }
 
     boolean willCreateUserFolder(ItemInfo info, CellLayout target, int[] targetCell, float

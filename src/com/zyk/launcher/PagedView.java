@@ -481,7 +481,6 @@ public abstract class PagedView extends ViewGroup implements ViewGroup.OnHierarc
     }
 
     int getNextPage() {
-        System.out.println(""+(mNextPage != INVALID_PAGE));
         return (mNextPage != INVALID_PAGE) ? mNextPage : mCurrentPage;
     }
 
@@ -490,7 +489,9 @@ public abstract class PagedView extends ViewGroup implements ViewGroup.OnHierarc
     }
 
     View getPageAt(int index) {
-        return getChildAt(index);
+        View view = getChildAt(index);
+        System.out.println("padding PageView index:"+index+"  "+view);
+        return view;
     }
 
     protected int indexToPage(int index) {
@@ -938,7 +939,6 @@ public abstract class PagedView extends ViewGroup implements ViewGroup.OnHierarc
         if (!mIsDataReady || getChildCount() == 0) {
             return;
         }
-
         if (DEBUG) Log.d(TAG, "PagedView.onLayout()");
         final int childCount = getChildCount();
 
@@ -949,7 +949,6 @@ public abstract class PagedView extends ViewGroup implements ViewGroup.OnHierarc
         mViewport.offset(offsetX,  offsetY);
 
         final boolean isRtl = isLayoutRtl();
-
         final int startIndex = isRtl ? childCount - 1 : 0;
         final int endIndex = isRtl ? -1 : childCount;
         final int delta = isRtl ? -1 : 1;
@@ -966,6 +965,7 @@ public abstract class PagedView extends ViewGroup implements ViewGroup.OnHierarc
 
         for (int i = startIndex; i != endIndex; i += delta) {
             final View child = getPageAt(i);
+//            final View child = getChildAt(i);
             if (child.getVisibility() != View.GONE) {
                 lp = (LayoutParams) child.getLayoutParams();
                 int childTop;
@@ -982,8 +982,12 @@ public abstract class PagedView extends ViewGroup implements ViewGroup.OnHierarc
                 final int childHeight = child.getMeasuredHeight();
 
                 if (DEBUG) Log.d(TAG, "\tlayout-child" + i + ": " + childLeft + ", " + childTop);
+//                if(child instanceof AppsCustomizeCellLayout){
+                    System.out.println("padding PageView index:"+i+"  "+child+"  "+childLeft+"  "+childTop+"  "+(childLeft + child.getMeasuredWidth())+"  "+ (childTop + childHeight));
+//                }
+
                 child.layout(childLeft, childTop,
-                        childLeft + child.getMeasuredWidth(), childTop + childHeight);
+                        childLeft + childWidth, childTop + childHeight);
 
                 int scrollOffsetLeft = lp.isFullScreenPage ? 0 : getPaddingLeft();
                 mPageScrolls[i] = childLeft - scrollOffsetLeft - offsetX;

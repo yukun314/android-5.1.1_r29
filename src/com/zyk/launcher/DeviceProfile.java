@@ -399,15 +399,15 @@ public class DeviceProfile {
         // All Apps
         allAppsCellWidthPx = allAppsIconSizePx;
         allAppsCellHeightPx = allAppsIconSizePx + drawablePadding + iconTextSizePx;
-//        int maxLongEdgeCellCount =
-//                resources.getInteger(R.integer.config_dynamic_grid_max_long_edge_cell_count);
-//        int maxShortEdgeCellCount =
-//                resources.getInteger(R.integer.config_dynamic_grid_max_short_edge_cell_count);
+        int maxLongEdgeCellCount =
+                resources.getInteger(R.integer.config_dynamic_grid_max_long_edge_cell_count);
+        int maxShortEdgeCellCount =
+                resources.getInteger(R.integer.config_dynamic_grid_max_short_edge_cell_count);
         int minEdgeCellCount =
                 resources.getInteger(R.integer.config_dynamic_grid_min_edge_cell_count);
 
-//        int maxRows = (isLandscape ? maxShortEdgeCellCount : maxLongEdgeCellCount);
-//        int maxCols = (isLandscape ? maxLongEdgeCellCount : maxShortEdgeCellCount);
+        int maxRows = (isLandscape ? maxShortEdgeCellCount : maxLongEdgeCellCount);
+        int maxCols = (isLandscape ? maxLongEdgeCellCount : maxShortEdgeCellCount);
         //maxRowa = maxLongEdgeCellCount 影响了结果的正确
         //maxCols = maxShortEdgeCellCount
         if (allAppsShortEdgeCount > 0 && allAppsLongEdgeCount > 0) {
@@ -416,12 +416,12 @@ public class DeviceProfile {
         } else {
             allAppsNumRows = (availableHeightPx - pageIndicatorHeightPx - hotseatBarHeightPx) /
                     (allAppsCellHeightPx + allAppsCellPaddingPx);
-//            allAppsNumRows = Math.max(minEdgeCellCount, Math.min(maxRows, allAppsNumRows));
-            allAppsNumRows = Math.max(minEdgeCellCount, allAppsNumRows);
+            allAppsNumRows = Math.max(minEdgeCellCount, Math.min(maxRows, allAppsNumRows));
+//            allAppsNumRows = Math.max(minEdgeCellCount, allAppsNumRows);
             allAppsNumCols = (availableWidthPx) /
                     (allAppsCellWidthPx + allAppsCellPaddingPx);
-//            allAppsNumCols = Math.max(minEdgeCellCount, Math.min(4, allAppsNumCols));
-            allAppsNumCols = Math.max(minEdgeCellCount, allAppsNumCols);
+            allAppsNumCols = Math.max(minEdgeCellCount, Math.min(maxCols, allAppsNumCols));
+//            allAppsNumCols = Math.max(minEdgeCellCount, allAppsNumCols);
         }
     }
 
@@ -891,7 +891,6 @@ public class DeviceProfile {
 
                 padding.left += pagedFixedViewPadding;
                 padding.right += pagedFixedViewPadding;
-
                 pagedView.setPadding(padding.left, padding.top, padding.right, padding.bottom);
                 fakePageContainer.setPadding(padding.left, padding.top, padding.right, padding.bottom);
 
