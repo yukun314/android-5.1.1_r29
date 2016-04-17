@@ -8,8 +8,10 @@ import android.view.View;
 import com.zyk.launcher.Alarm;
 import com.zyk.launcher.CellLayout;
 import com.zyk.launcher.DeviceProfile;
+import com.zyk.launcher.DragLayer;
 import com.zyk.launcher.DragView;
 import com.zyk.launcher.DropTarget;
+import com.zyk.launcher.Folder;
 import com.zyk.launcher.FolderIcon;
 import com.zyk.launcher.Hotseat;
 import com.zyk.launcher.ItemInfo;
@@ -39,6 +41,7 @@ public class DragUtils {
     public FolderIcon mDragOverFolderIcon = null;
     public int mLastReorderX = -1;
     public int mLastReorderY = -1;
+    public boolean mIsDragOccuring = false;
     private int[] mTempPt = new int[2];
 
     private final Launcher mLauncher;
@@ -193,6 +196,23 @@ public class DragUtils {
                                   int spanX, int spanY, CellLayout layout, int[] recycle) {
         return layout.findNearestArea(
                 pixelX, pixelY, spanX, spanY, recycle);
+    }
+
+    /**
+     * @return The open folder on the current screen, or null if there is none
+     */
+    public Folder getOpenFolder() {
+        DragLayer dragLayer = mLauncher.getDragLayer();
+        int count = dragLayer.getChildCount();
+        for (int i = 0; i < count; i++) {
+            View child = dragLayer.getChildAt(i);
+            if (child instanceof Folder) {
+                Folder folder = (Folder) child;
+                if (folder.getInfo().opened)
+                    return folder;
+            }
+        }
+        return null;
     }
 
     public FolderCreationAlarmListener getNewFCAL(CellLayout layout, int cellX, int cellY){

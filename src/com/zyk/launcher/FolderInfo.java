@@ -32,7 +32,7 @@ public class FolderInfo extends ItemInfo {
     /**
      * Whether this folder has been opened
      */
-    boolean opened;
+    public boolean opened;
 
     /**
      * The apps and shortcuts

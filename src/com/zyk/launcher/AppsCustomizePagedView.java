@@ -227,6 +227,8 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     private boolean mNeedToUpdatePageCountsAndInvalidateData;
     private float mMaxDistanceForFolderCreation;
 
+    private float mTransitionProgress;
+
     public AppsCustomizePagedView(Context context, AttributeSet attrs) {
         super(context, attrs);
         mLayoutInflater = LayoutInflater.from(context);
@@ -255,6 +257,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         DeviceProfile grid = LauncherAppState.getInstance().getDynamicGrid().getDeviceProfile();
         mMaxDistanceForFolderCreation = (0.55f * grid.iconSizePx);
         mDragUtils = new DragUtils(mLauncher, this);
+        mDragEnforcer = new DropTarget.DragEnforcer(context);
     }
 
     @Override
@@ -819,6 +822,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     @Override
     public void onLauncherTransitionStep(Launcher l, float t) {
+        mTransitionProgress = t;
     }
 
     @Override
@@ -1648,6 +1652,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     private final int[] mTempXY = new int[2];
     private ShortcutAndWidgetContainer mDragSourceInternal;
     private boolean mCreateUserFolderOnDrop = false;
+    private boolean mAddToExistingFolderOnDrop = false;
     private float[] mDragViewVisualCenter = new float[2];
     private Matrix mTempInverseMatrix = new Matrix();
     private float[] mTempCellLayoutCenterCoordinates = new float[2];
@@ -1677,6 +1682,9 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
      */
     private CellLayout.CellInfo mDragInfo;
     private Workspace.State mState = Workspace.State.NORMAL;
+    private DropTarget.DragEnforcer mDragEnforcer;
+    /** Is the user is dragging an item near the edge of a page? */
+    private boolean mInScrollArea = false;
 
     @Override
     public boolean isDropEnabled() {
@@ -1690,11 +1698,9 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     @Override
     public void onDragEnter(DragObject dragObject) {
-        System.out.println("AppsCustomizePagedView onDragEnter");
-//        mDragEnforcer.onDragEnter();
+        mDragEnforcer.onDragEnter();
         mCreateUserFolderOnDrop = false;
-//        mAddToExistingFolderOnDrop = false;
-
+        mAddToExistingFolderOnDrop = false;
         mDropToLayout = null;
         CellLayout layout = getCurrentDropLayout();
         setCurrentDropLayout(layout);
@@ -1707,7 +1713,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     @Override
     public void onDragOver(DragObject d) {
-//        if (mInScrollArea || !transitionStateShouldAllowDrop()) return;
+        if (mInScrollArea || !transitionStateShouldAllowDrop()) return;
         Rect r = new Rect();
         CellLayout layout = null;
         ItemInfo item = (ItemInfo) d.dragInfo;
@@ -1834,39 +1840,40 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     @Override
     public void onDragExit(DragObject dragObject) {
-//        mDragEnforcer.onDragExit();
-//
-//        // Here we store the final page that will be dropped to, if the workspace in fact
-//        // receives the drop
-//        if (mInScrollArea) {
-//            if (isPageMoving()) {
-//                // If the user drops while the page is scrolling, we should use that page as the
-//                // destination instead of the page that is being hovered over.
-//                mDropToLayout = (CellLayout) getPageAt(getNextPage());
-//            } else {
-//                mDropToLayout = mDragOverlappingLayout;
-//            }
-//        } else {
-//            mDropToLayout = mDragTargetLayout;
-//        }
-//
-//        if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_CREATE_FOLDER) {
-//            mCreateUserFolderOnDrop = true;
-//        } else if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_ADD_TO_FOLDER) {
-//            mAddToExistingFolderOnDrop = true;
-//        }
-//
-//        // Reset the scroll area and previous drag target
-//        onResetScrollArea();
-//        setCurrentDropLayout(null);
-//        setCurrentDragOverlappingLayout(null);
-//
+        mDragEnforcer.onDragExit();
+
+        // Here we store the final page that will be dropped to, if the workspace in fact
+        // receives the drop
+        if (mInScrollArea) {
+            if (isPageMoving()) {
+                // If the user drops while the page is scrolling, we should use that page as the
+                // destination instead of the page that is being hovered over.
+                mDropToLayout = (CellLayout) getPageAt(getNextPage());
+            } else {
+                mDropToLayout = mDragOverlappingLayout;
+            }
+        } else {
+            mDropToLayout = mDragTargetLayout;
+        }
+
+        if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_CREATE_FOLDER) {
+            mCreateUserFolderOnDrop = true;
+        } else if (mDragUtils.mDragMode == DragUtils.DRAG_MODE_ADD_TO_FOLDER) {
+            mAddToExistingFolderOnDrop = true;
+        }
+
+        // Reset the scroll area and previous drag target
+        onResetScrollArea();
+        setCurrentDropLayout(null);
+        setCurrentDragOverlappingLayout(null);
+
 //        mSpringLoadedDragController.cancel();
-//
-//        if (!mIsPageMoving) {
+        if (!mIsPageMoving) {
+            //FIXME
+            System.out.println("AppsCustomizePagedView !mIsPageMoving is true hideOutlines");
 //            hideOutlines();
-//        }
-//        mLauncher.getDragLayer().hidePageHints();
+        }
+        mLauncher.getDragLayer().hidePageHints();
     }
 
     @Override
@@ -1876,90 +1883,89 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     @Override
     public boolean acceptDrop(DragObject dragObject) {
-//        // If it's an external drop (e.g. from All Apps), check if it should be accepted
-//        CellLayout dropTargetLayout = mDropToLayout;
-//        if (dragObject.dragSource != this) {
-//            // Don't accept the drop if we're not over a screen at time of drop
-//            if (dropTargetLayout == null) {
-//                return false;
-//            }
-//            if (!transitionStateShouldAllowDrop()) return false;
-//
-//            mDragViewVisualCenter = mDragUtils.getDragViewVisualCenter(dragObject.x, dragObject.y, dragObject.xOffset, dragObject.yOffset,
-//                    dragObject.dragView, mDragViewVisualCenter,getResources());
-//
-//            // We want the point to be mapped to the dragTarget.
-//            if (mLauncher.isHotseatLayout(dropTargetLayout)) {
-//                mDragUtils.mapPointFromSelfToHotseatLayout(mLauncher.getHotseat(), mDragViewVisualCenter);
-//            } else {
-//                mDragUtils.mapPointFromSelfToChild(dropTargetLayout, mDragViewVisualCenter, null);
-//            }
-//
-//            int spanX = 1;
-//            int spanY = 1;
-//            if (mDragInfo != null) {
-//                final CellLayout.CellInfo dragCellInfo = mDragInfo;
-//                spanX = dragCellInfo.spanX;
-//                spanY = dragCellInfo.spanY;
-//            } else {
-//                final ItemInfo dragInfo = (ItemInfo)dragObject.dragInfo;
-//                spanX = dragInfo.spanX;
-//                spanY = dragInfo.spanY;
-//            }
-//
-//            int minSpanX = spanX;
-//            int minSpanY = spanY;
-//            if (dragObject.dragInfo instanceof PendingAddWidgetInfo) {
-//                minSpanX = ((PendingAddWidgetInfo) dragObject.dragInfo).minSpanX;
-//                minSpanY = ((PendingAddWidgetInfo) dragObject.dragInfo).minSpanY;
-//            }
-//
-//            mTargetCell = mDragUtils.findNearestArea((int) mDragViewVisualCenter[0],
-//                    (int) mDragViewVisualCenter[1], minSpanX, minSpanY, dropTargetLayout,
-//                    mTargetCell);
-//            float distance = dropTargetLayout.getDistanceFromCell(mDragViewVisualCenter[0],
-//                    mDragViewVisualCenter[1], mTargetCell);
-//            if (mCreateUserFolderOnDrop && willCreateUserFolder((ItemInfo) dragObject.dragInfo,
-//                    dropTargetLayout, mTargetCell, distance, true)) {
-//                return true;
-//            }
-//
-//            if (mAddToExistingFolderOnDrop && willAddToExistingUserFolder((ItemInfo) dragObject.dragInfo,
-//                    dropTargetLayout, mTargetCell, distance)) {
-//                return true;
-//            }
-//
-//            int[] resultSpan = new int[2];
-//            mTargetCell = dropTargetLayout.performReorder((int) mDragViewVisualCenter[0],
-//                    (int) mDragViewVisualCenter[1], minSpanX, minSpanY, spanX, spanY,
-//                    null, mTargetCell, resultSpan, CellLayout.MODE_ACCEPT_DROP);
-//            boolean foundCell = mTargetCell[0] >= 0 && mTargetCell[1] >= 0;
-//
-//            // Don't accept the drop if there's no room for the item
-//            if (!foundCell) {
-//                // Don't show the message if we are dropping on the AllApps button and the hotseat
-//                // is full
-//                boolean isHotseat = mLauncher.isHotseatLayout(dropTargetLayout);
-//                if (mTargetCell != null && isHotseat) {
-//                    Hotseat hotseat = mLauncher.getHotseat();
-//                    if (hotseat.isAllAppsButtonRank(
-//                            hotseat.getOrderInHotseat(mTargetCell[0], mTargetCell[1]))) {
-//                        return false;
-//                    }
-//                }
-//
-//                mLauncher.showOutOfSpaceMessage(isHotseat);
-//                return false;
-//            }
-//        }
-//
+        // If it's an external drop (e.g. from All Apps), check if it should be accepted
+        CellLayout dropTargetLayout = mDropToLayout;
+        if (dragObject.dragSource != this) {
+            // Don't accept the drop if we're not over a screen at time of drop
+            if (dropTargetLayout == null) {
+                return false;
+            }
+            if (!transitionStateShouldAllowDrop()) return false;
+
+            mDragViewVisualCenter = mDragUtils.getDragViewVisualCenter(dragObject.x, dragObject.y, dragObject.xOffset, dragObject.yOffset,
+                    dragObject.dragView, mDragViewVisualCenter,getResources());
+
+            // We want the point to be mapped to the dragTarget.
+            if (mLauncher.isHotseatLayout(dropTargetLayout)) {
+                mDragUtils.mapPointFromSelfToHotseatLayout(mLauncher.getHotseat(), mDragViewVisualCenter);
+            } else {
+                mDragUtils.mapPointFromSelfToChild(dropTargetLayout, mDragViewVisualCenter, null);
+            }
+
+            int spanX = 1;
+            int spanY = 1;
+            if (mDragInfo != null) {
+                final CellLayout.CellInfo dragCellInfo = mDragInfo;
+                spanX = dragCellInfo.spanX;
+                spanY = dragCellInfo.spanY;
+            } else {
+                final ItemInfo dragInfo = (ItemInfo)dragObject.dragInfo;
+                spanX = dragInfo.spanX;
+                spanY = dragInfo.spanY;
+            }
+
+            int minSpanX = spanX;
+            int minSpanY = spanY;
+            if (dragObject.dragInfo instanceof PendingAddWidgetInfo) {
+                minSpanX = ((PendingAddWidgetInfo) dragObject.dragInfo).minSpanX;
+                minSpanY = ((PendingAddWidgetInfo) dragObject.dragInfo).minSpanY;
+            }
+
+            mTargetCell = mDragUtils.findNearestArea((int) mDragViewVisualCenter[0],
+                    (int) mDragViewVisualCenter[1], minSpanX, minSpanY, dropTargetLayout,
+                    mTargetCell);
+            float distance = dropTargetLayout.getDistanceFromCell(mDragViewVisualCenter[0],
+                    mDragViewVisualCenter[1], mTargetCell);
+            if (mCreateUserFolderOnDrop && willCreateUserFolder((ItemInfo) dragObject.dragInfo,
+                    dropTargetLayout, mTargetCell, distance, true)) {
+                return true;
+            }
+
+            if (mAddToExistingFolderOnDrop && willAddToExistingUserFolder((ItemInfo) dragObject.dragInfo,
+                    dropTargetLayout, mTargetCell, distance)) {
+                return true;
+            }
+
+            int[] resultSpan = new int[2];
+            mTargetCell = dropTargetLayout.performReorder((int) mDragViewVisualCenter[0],
+                    (int) mDragViewVisualCenter[1], minSpanX, minSpanY, spanX, spanY,
+                    null, mTargetCell, resultSpan, CellLayout.MODE_ACCEPT_DROP);
+            boolean foundCell = mTargetCell[0] >= 0 && mTargetCell[1] >= 0;
+
+            // Don't accept the drop if there's no room for the item
+            if (!foundCell) {
+                // Don't show the message if we are dropping on the AllApps button and the hotseat
+                // is full
+                boolean isHotseat = mLauncher.isHotseatLayout(dropTargetLayout);
+                if (mTargetCell != null && isHotseat) {
+                    Hotseat hotseat = mLauncher.getHotseat();
+                    if (hotseat.isAllAppsButtonRank(
+                            hotseat.getOrderInHotseat(mTargetCell[0], mTargetCell[1]))) {
+                        return false;
+                    }
+                }
+
+                mLauncher.showOutOfSpaceMessage(isHotseat);
+                return false;
+            }
+        }
+        //FIXME 更改AllApps的来源之后才能用到
 //        long screenId = getIdForScreen(dropTargetLayout);
-//        if (screenId == EXTRA_EMPTY_SCREEN_ID) {
+//        if (screenId == Workspace.EXTRA_EMPTY_SCREEN_ID) {
 //            commitExtraEmptyScreen();
 //        }
-//
-//        return true;
-        return false ;
+
+        return true;
     }
 
     @Override
@@ -1973,7 +1979,6 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     @Override
     public void getLocationInDragLayer(int[] loc) {
-        System.out.println("AppsCustomizePagedView getLocationInDragLayer");
         mLauncher.getDragLayer().getLocationInDragLayer(this, loc);
     }
     //DropTarget的实现方法结束
@@ -1981,52 +1986,100 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     //一下两个为DragController.DragListener的两个方法
     @Override
     public void onDragStart(DragSource source, Object info, int dragAction) {
-//        mIsDragOccuring = true;
+        mDragUtils.mIsDragOccuring = true;
 //        updateChildrenLayersEnabled(false);
-//        mLauncher.lockScreenOrientation();
-//        mLauncher.onInteractionBegin();
-//        setChildrenBackgroundAlphaMultipliers(1f);
-//        // Prevent any Un/InstallShortcutReceivers from updating the db while we are dragging
-//        InstallShortcutReceiver.enableInstallQueue();
-//        UninstallShortcutReceiver.enableUninstallQueue();
-//        post(new Runnable() {
-//            @Override
-//            public void run() {
-//                if (mIsDragOccuring) {
+        mLauncher.lockScreenOrientation();
+        mLauncher.onInteractionBegin();
+        setChildrenBackgroundAlphaMultipliers(1f);
+        // Prevent any Un/InstallShortcutReceivers from updating the db while we are dragging
+        InstallShortcutReceiver.enableInstallQueue();
+        UninstallShortcutReceiver.enableUninstallQueue();
+        post(new Runnable() {
+            @Override
+            public void run() {
+                if (mDragUtils.mIsDragOccuring) {
+                    //FIXME 关于添加空屏幕的
 //                    mDeferRemoveExtraEmptyScreen = false;
 //                    addExtraEmptyScreenOnDrag();
-//                }
-//            }
-//        });
+                }
+            }
+        });
     }
 
     @Override
     public void onDragEnd() {
+        //FIXME 关于删除空屏幕的
 //        if (!mDeferRemoveExtraEmptyScreen) {
 //            removeExtraEmptyScreen(true, mDragSourceInternal != null);
 //        }
-//
-//        mIsDragOccuring = false;
+
+        mDragUtils.mIsDragOccuring = false;
 //        updateChildrenLayersEnabled(false);
-//        mLauncher.unlockScreenOrientation(false);
-//
-//        // Re-enable any Un/InstallShortcutReceiver and now process any queued items
-//        InstallShortcutReceiver.disableAndFlushInstallQueue(getContext());
-//        UninstallShortcutReceiver.disableAndFlushUninstallQueue(getContext());
-//
-//        mDragSourceInternal = null;
-//        mLauncher.onInteractionEnd();
-//        mLauncher.getAllAppsButton().setIsEnable(false);
+        mLauncher.unlockScreenOrientation(false);
+
+        // Re-enable any Un/InstallShortcutReceiver and now process any queued items
+        InstallShortcutReceiver.disableAndFlushInstallQueue(getContext());
+        UninstallShortcutReceiver.disableAndFlushUninstallQueue(getContext());
+
+        mDragSourceInternal = null;
+        mLauncher.onInteractionEnd();
+        mLauncher.getAllAppsButton().setIsEnable(false);
     }
     //一下两个为DragScroller的两个方法
     @Override
     public boolean onEnterScrollArea(int x, int y, int direction) {
-        return false;
+        // Ignore the scroll area if we are dragging over the hot seat
+        boolean isPortrait = !LauncherAppState.isScreenLandscape(getContext());
+        if (mLauncher.getHotseat() != null && isPortrait) {
+            Rect r = new Rect();
+            mLauncher.getHotseat().getHitRect(r);
+            if (r.contains(x, y)) {
+                return false;
+            }
+        }
+
+        boolean result = false;
+//        if (!workspaceInModalState() && !mIsSwitchingState && mDragUtils.getOpenFolder() == null) {
+        if (!workspaceInModalState() && mDragUtils.getOpenFolder() == null) {
+            mInScrollArea = true;
+
+            final int page = getNextPage() +
+                    (direction == DragController.SCROLL_LEFT ? -1 : 1);
+            // We always want to exit the current layout to ensure parity of enter / exit
+            setCurrentDropLayout(null);
+
+            if (0 <= page && page < getChildCount()) {
+                // Ensure that we are not dragging over to the custom content screen
+                //FIXME
+//                if (getScreenIdForPageIndex(page) == Workspace.CUSTOM_CONTENT_SCREEN_ID) {
+//                    return false;
+//                }
+
+                CellLayout layout = (CellLayout) getChildAt(page);
+                setCurrentDragOverlappingLayout(layout);
+
+                // Workspace is responsible for drawing the edge glow on adjacent pages,
+                // so we need to redraw the workspace when this may have changed.
+                invalidate();
+                result = true;
+            }
+        }
+        return result;
     }
 
     @Override
     public boolean onExitScrollArea() {
-        return false;
+        boolean result = false;
+        if (mInScrollArea) {
+            invalidate();
+            CellLayout layout = getCurrentDropLayout();
+            setCurrentDropLayout(layout);
+            setCurrentDragOverlappingLayout(layout);
+
+            result = true;
+            mInScrollArea = false;
+        }
+        return result;
     }
 
     void setCurrentDropLayout(CellLayout layout) {
@@ -2345,6 +2398,26 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
                 ViewCompat.IMPORTANT_FOR_ACCESSIBILITY_YES :
                 ViewCompat.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS;
         setImportantForAccessibility(accessible);
+    }
+
+    private boolean transitionStateShouldAllowDrop() {
+        //isSwitchingState() 不知道表示什么意思，感觉与Menu有关
+//        return ((!isSwitchingState() || mTransitionProgress > 0.5f) &&
+//                (mState == Workspace.State.NORMAL || mState == Workspace.State.SPRING_LOADED));
+        return ((mTransitionProgress > 0.5f) &&
+                (mState == Workspace.State.NORMAL || mState == Workspace.State.SPRING_LOADED));
+    }
+
+    private void onResetScrollArea() {
+        setCurrentDragOverlappingLayout(null);
+        mInScrollArea = false;
+    }
+
+    private void setChildrenBackgroundAlphaMultipliers(float a) {
+        for (int i = 0; i < getChildCount(); i++) {
+            CellLayout child = (CellLayout) getChildAt(i);
+            child.setBackgroundAlphaMultiplier(a);
+        }
     }
 
     class ReorderAlarmListener implements OnAlarmListener {

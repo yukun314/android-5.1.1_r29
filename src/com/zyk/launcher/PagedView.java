@@ -490,7 +490,6 @@ public abstract class PagedView extends ViewGroup implements ViewGroup.OnHierarc
 
     View getPageAt(int index) {
         View view = getChildAt(index);
-        System.out.println("padding PageView index:"+index+"  "+view);
         return view;
     }
 
@@ -982,9 +981,6 @@ public abstract class PagedView extends ViewGroup implements ViewGroup.OnHierarc
                 final int childHeight = child.getMeasuredHeight();
 
                 if (DEBUG) Log.d(TAG, "\tlayout-child" + i + ": " + childLeft + ", " + childTop);
-//                if(child instanceof AppsCustomizeCellLayout){
-                    System.out.println("padding PageView index:"+i+"  "+child+"  "+childLeft+"  "+childTop+"  "+(childLeft + child.getMeasuredWidth())+"  "+ (childTop + childHeight));
-//                }
 
                 child.layout(childLeft, childTop,
                         childLeft + childWidth, childTop + childHeight);

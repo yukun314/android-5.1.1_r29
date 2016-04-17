@@ -131,7 +131,7 @@ public class Workspace extends SmoothPagedView
     private static boolean sAccessibilityEnabled;
 
     // The screen id used for the empty screen always present to the right.
-    final static long EXTRA_EMPTY_SCREEN_ID = -201;
+    public final static long EXTRA_EMPTY_SCREEN_ID = -201;
     public final static long CUSTOM_CONTENT_SCREEN_ID = -301;
 
     private HashMap<Long, CellLayout> mWorkspaceScreens = new HashMap<Long, CellLayout>();
@@ -199,7 +199,6 @@ public class Workspace extends SmoothPagedView
     private boolean mIsSwitchingState = false;
 
     boolean mAnimatingViewIntoPlace = false;
-    boolean mIsDragOccuring = false;
     boolean mChildrenLayersEnabled = true;
 
     private boolean mStripScreensOnPageStopMoving = false;
@@ -396,7 +395,7 @@ public class Workspace extends SmoothPagedView
     }
 
     public void onDragStart(final DragSource source, Object info, int dragAction) {
-        mIsDragOccuring = true;
+        mDragUtils.mIsDragOccuring = true;
         updateChildrenLayersEnabled(false);
         mLauncher.lockScreenOrientation();
         mLauncher.onInteractionBegin();
@@ -407,7 +406,7 @@ public class Workspace extends SmoothPagedView
         post(new Runnable() {
             @Override
             public void run() {
-                if (mIsDragOccuring) {
+                if (mDragUtils.mIsDragOccuring) {
                     mDeferRemoveExtraEmptyScreen = false;
                     addExtraEmptyScreenOnDrag();
                 }
@@ -415,6 +414,12 @@ public class Workspace extends SmoothPagedView
         });
     }
 
+    /**
+     * @return The open folder on the current screen, or null if there is none
+     */
+    Folder getOpenFolder() {
+        return mDragUtils.getOpenFolder();
+    }
 
     public void deferRemoveExtraEmptyScreen() {
         mDeferRemoveExtraEmptyScreen = true;
@@ -425,7 +430,7 @@ public class Workspace extends SmoothPagedView
             removeExtraEmptyScreen(true, mDragSourceInternal != null);
         }
 
-        mIsDragOccuring = false;
+        mDragUtils.mIsDragOccuring = false;
         updateChildrenLayersEnabled(false);
         mLauncher.unlockScreenOrientation(false);
 
@@ -505,23 +510,6 @@ public class Workspace extends SmoothPagedView
             (mIsSwitchingState ||
              cl.getShortcutsAndWidgets().getAlpha() > 0 ||
              cl.getBackgroundAlpha() > 0);
-    }
-
-    /**
-     * @return The open folder on the current screen, or null if there is none
-     */
-    Folder getOpenFolder() {
-        DragLayer dragLayer = mLauncher.getDragLayer();
-        int count = dragLayer.getChildCount();
-        for (int i = 0; i < count; i++) {
-            View child = dragLayer.getChildAt(i);
-            if (child instanceof Folder) {
-                Folder folder = (Folder) child;
-                if (folder.getInfo().opened)
-                    return folder;
-            }
-        }
-        return null;
     }
 
     boolean isTouchActive() {
@@ -1825,7 +1813,7 @@ public class Workspace extends SmoothPagedView
     @Override
     protected boolean onRequestFocusInDescendants(int direction, Rect previouslyFocusedRect) {
         if (!mLauncher.isAllAppsVisible()) {
-            final Folder openFolder = getOpenFolder();
+            final Folder openFolder = mDragUtils.getOpenFolder();
             if (openFolder != null) {
                 return openFolder.requestFocus(direction, previouslyFocusedRect);
             } else {
@@ -1846,7 +1834,7 @@ public class Workspace extends SmoothPagedView
     @Override
     public void addFocusables(ArrayList<View> views, int direction, int focusableMode) {
         if (!mLauncher.isAllAppsVisible()) {
-            final Folder openFolder = getOpenFolder();
+            final Folder openFolder = mDragUtils.getOpenFolder();
             if (openFolder != null) {
                 openFolder.addFocusables(views, direction);
             } else {
@@ -2763,7 +2751,7 @@ public class Workspace extends SmoothPagedView
                 cellXY[1]);
     }
 
-    public boolean transitionStateShouldAllowDrop() {
+    private boolean transitionStateShouldAllowDrop() {
         return ((!isSwitchingState() || mTransitionProgress > 0.5f) &&
                 (mState == State.NORMAL || mState == State.SPRING_LOADED));
     }
@@ -4267,7 +4255,7 @@ public class Workspace extends SmoothPagedView
         if (!workspaceInModalState() && !mIsSwitchingState) {
             super.scrollLeft();
         }
-        Folder openFolder = getOpenFolder();
+        Folder openFolder = mDragUtils.getOpenFolder();
         if (openFolder != null) {
             openFolder.completeDragExit();
         }
@@ -4278,7 +4266,7 @@ public class Workspace extends SmoothPagedView
         if (!workspaceInModalState() && !mIsSwitchingState) {
             super.scrollRight();
         }
-        Folder openFolder = getOpenFolder();
+        Folder openFolder = mDragUtils.getOpenFolder();
         if (openFolder != null) {
             openFolder.completeDragExit();
         }
@@ -4297,7 +4285,7 @@ public class Workspace extends SmoothPagedView
         }
 
         boolean result = false;
-        if (!workspaceInModalState() && !mIsSwitchingState && getOpenFolder() == null) {
+        if (!workspaceInModalState() && !mIsSwitchingState && mDragUtils.getOpenFolder() == null) {
             mInScrollArea = true;
 
             final int page = getNextPage() +

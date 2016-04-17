@@ -339,7 +339,7 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
     /**
      * @return the FolderInfo object associated with this folder
      */
-    FolderInfo getInfo() {
+    public FolderInfo getInfo() {
         return mInfo;
     }
 
