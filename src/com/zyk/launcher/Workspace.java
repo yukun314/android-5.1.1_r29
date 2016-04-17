@@ -1812,13 +1812,6 @@ public class Workspace extends SmoothPagedView
             mWallpaperOffset.jumpToFinal();
         }
         super.onLayout(changed, left, top, right, bottom);
-        int count = getChildCount();
-        System.out.println("padding workspace ====================================");
-        for(int i = 0;i<count;i++){
-            View child = getChildAt(i);
-            System.out.println("padding workspace index:"+i+"   "+child+"  "+child.getLeft()+"  "+child.getTop()+"  "+child.getRight()+"  "+ child.getBottom());
-        }
-        System.out.println("padding workspace ====================================");
     }
 
     @Override
@@ -2892,7 +2885,6 @@ public class Workspace extends SmoothPagedView
         boolean willBecomeShortcut =
                 (info.itemType == LauncherSettings.Favorites.ITEM_TYPE_APPLICATION ||
                 info.itemType == LauncherSettings.Favorites.ITEM_TYPE_SHORTCUT);
-
         return (aboveShortcut && willBecomeShortcut);
     }
 
@@ -3471,7 +3463,6 @@ public class Workspace extends SmoothPagedView
                 setCurrentDragOverlappingLayout(layout);
             }
         }
-        System.out.println("mDragTargetLayout is null:"+(mDragTargetLayout == null));
         // Handle the drag over
         if (mDragTargetLayout != null) {
             // We want the point to be mapped to the dragTarget.

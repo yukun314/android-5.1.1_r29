@@ -1,7 +1,7 @@
 <resources>
 <!-- Dynamic Grid -->
-    <!--<integer name="config_dynamic_grid_max_long_edge_cell_count">6</integer>-->
-    <!--<integer name="config_dynamic_grid_max_short_edge_cell_count">4</integer>-->
+    <integer name="config_dynamic_grid_max_long_edge_cell_count">6</integer>
+    <integer name="config_dynamic_grid_max_short_edge_cell_count">4</integer>
     <integer name="config_dynamic_grid_min_edge_cell_count">3</integer>
     <!-- Out of 100, the percent of space the overview bar should try and take vertically. -->
     <integer name="config_dynamic_grid_overview_icon_zone_percentage">20</integer>

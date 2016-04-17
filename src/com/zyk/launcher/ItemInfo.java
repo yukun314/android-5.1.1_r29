@@ -19,6 +19,7 @@ package com.zyk.launcher;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.graphics.Bitmap;
 import android.util.Log;
 
@@ -40,7 +41,6 @@ public class ItemInfo {
     static final String EXTRA_PROFILE = "profile";
     
     static final int NO_ID = -1;
-    
     /**
      * The id in the settings database for this item
      */
