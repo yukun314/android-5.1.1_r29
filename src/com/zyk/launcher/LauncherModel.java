@@ -143,6 +143,8 @@ public class LauncherModel extends BroadcastReceiver
 
     private WeakReference<Callbacks> mCallbacks;
 
+    private Launcher mLauncher;
+
     // < only access in worker thread >
     AllAppsList mBgAllAppsList;
 
@@ -1086,6 +1088,71 @@ public class LauncherModel extends BroadcastReceiver
     }
 
     /**
+     * Add an item to the database in a specified container. Sets the container, screen, cellX and
+     * cellY fields of the item. Also assigns an ID to the item.
+     * 仅仅把item添加到数据库 并没有相关集合的操作
+     */
+    static void addAllAppsItemToDatabase(Context context, final ItemInfo item, final boolean notify) {
+
+        final ContentValues values = new ContentValues();
+        final ContentResolver cr = context.getContentResolver();
+        item.onAddToDatabase(context, values);
+
+        item.id = LauncherAppState.getLauncherProvider().generateNewItemId();
+        values.put(LauncherSettings.Allapps._ID, item.id);
+        values.put(LauncherSettings.Allapps.CELLX, item.cellX);
+        values.put(LauncherSettings.Allapps.CELLY, item.cellY);
+        values.put(LauncherSettings.Allapps.ITEM_TYPE, item.itemType);
+        values.put(LauncherSettings.Allapps.CONTAINER, item.container);
+        values.put(LauncherSettings.Allapps.SCREEN_ID, item.screenId);
+        values.put(LauncherSettings.Allapps.SPANX, item.spanX);
+        values.put(LauncherSettings.Allapps.SPANY, item.spanY);
+        values.put(LauncherSettings.Allapps.TITLE, item.title.toString());
+        values.put(LauncherSettings.Allapps.INTENT, item.getIntent().toUri(0));
+//        values.put(LauncherSettings.Allapps., item.);
+
+
+        //FIXME 把所有需要的值都要加进来
+
+        final StackTraceElement[] stackTrace = new Throwable().getStackTrace();
+        Runnable r = new Runnable() {
+            public void run() {
+                cr.insert(notify ? LauncherSettings.Allapps.CONTENT_URI :
+                        LauncherSettings.Allapps.CONTENT_URI_NO_NOTIFICATION, values);
+//
+//                // Lock on mBgLock *after* the db operation
+//                synchronized (sBgLock) {
+//                    checkItemInfoLocked(item.id, item, stackTrace);
+////                    sBgItemsIdMap.put(item.id, item);
+//                    switch (item.itemType) {
+//                        case LauncherSettings.Favorites.ITEM_TYPE_FOLDER:
+//                            sBgFolders.put(item.id, (FolderInfo) item);
+//                            // Fall through
+//                        case LauncherSettings.Favorites.ITEM_TYPE_APPLICATION:
+//                        case LauncherSettings.Favorites.ITEM_TYPE_SHORTCUT:
+//                            if (item.container == LauncherSettings.Favorites.CONTAINER_DESKTOP ||
+//                                    item.container == LauncherSettings.Favorites.CONTAINER_HOTSEAT) {
+//                                sBgWorkspaceItems.add(item);
+//                            } else {
+//                                if (!sBgFolders.containsKey(item.container)) {
+//                                    // Adding an item to a folder that doesn't exist.
+//                                    String msg = "adding item: " + item + " to a folder that " +
+//                                            " doesn't exist";
+//                                    Log.e(TAG, msg);
+//                                }
+//                            }
+//                            break;
+//                        case LauncherSettings.Favorites.ITEM_TYPE_APPWIDGET:
+//                            sBgAppWidgets.add((LauncherAppWidgetInfo) item);
+//                            break;
+//                    }
+//                }
+            }
+        };
+        runOnWorkerThread(r);
+    }
+
+    /**
      * Creates a new unique child id, for a given cell span across all layouts.
      */
     static int getCellLayoutChildId(
@@ -1261,6 +1328,10 @@ public class LauncherModel extends BroadcastReceiver
         synchronized (mLock) {
             mCallbacks = new WeakReference<Callbacks>(callbacks);
         }
+    }
+
+    public void setLauncher(Launcher launcher){
+        mLauncher = launcher;
     }
 
     @Override
@@ -2886,13 +2957,25 @@ public class LauncherModel extends BroadcastReceiver
                     Log.d(TAG, "sort took "
                             + (SystemClock.uptimeMillis()-sortTime) + "ms");
                 }
-
-                // Create the ApplicationInfos
-                for (int i = 0; i < apps.size(); i++) {
-                    LauncherActivityInfoCompat app = apps.get(i);
-                    // This builds the icon bitmaps.
-                    mBgAllAppsList.add(new AppInfo(mContext, app, user, mIconCache, mLabelCache));
-                }
+                //FIXME 流程还要修改 先做下添加数据的测试
+//                if(mLauncher.hasRunFirstRunActivity()) {//第一次启动时
+                    // Create the ApplicationInfos
+                    for (int i = 0; i < apps.size(); i++) {
+                        LauncherActivityInfoCompat app = apps.get(i);
+                        // This builds the icon bitmaps.
+                        AppInfo itemInfo = new AppInfo(mContext, app, user, mIconCache, mLabelCache);
+                        itemInfo.container = LauncherSettings.Allapps.CONTAINER_ALLAPPS;
+                        //FIXME 下面三条需要修改
+                        itemInfo.screenId = 1;
+                        itemInfo.cellX = 1;
+                        itemInfo.cellY = 1;
+                        mBgAllAppsList.add(itemInfo);
+                        addAllAppsItemToDatabase(mContext, itemInfo,false);
+                        System.out.println("添加AllApps测试");
+                    }
+//                } else {
+//
+//                }
 
                 if (ADD_MANAGED_PROFILE_SHORTCUTS && !user.equals(UserHandleCompat.myUserHandle())) {
                     // Add shortcuts for packages which were installed while launcher was dead.

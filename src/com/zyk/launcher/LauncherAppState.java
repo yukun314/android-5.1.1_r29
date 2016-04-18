@@ -162,6 +162,7 @@ public class LauncherAppState implements DeviceProfile.DeviceProfileCallbacks {
 
     LauncherModel setLauncher(Launcher launcher) {
         mModel.initialize(launcher);
+        mModel.setLauncher(launcher);
         return mModel;
     }
 

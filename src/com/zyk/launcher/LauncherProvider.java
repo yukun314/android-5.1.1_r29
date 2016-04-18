@@ -70,6 +70,7 @@ public class LauncherProvider extends ContentProvider {
     static final boolean IMPORT_LAUNCHER2_DATABASE = false;
 
     static final String TABLE_FAVORITES = "favorites";
+    static final String TABLE_ALLAPPS = "allapps";
     static final String TABLE_WORKSPACE_SCREENS = "workspaceScreens";
     static final String PARAMETER_NOTIFY = "notify";
     static final String UPGRADED_FROM_OLD_DATABASE =
@@ -452,6 +453,7 @@ public class LauncherProvider extends ContentProvider {
                     "restored INTEGER NOT NULL DEFAULT 0," +
                     "profileId INTEGER DEFAULT " + userSerialNumber +
                     ");");
+            createAllAppsTable(db, userSerialNumber);
             addWorkspacesTable(db);
 
             // Database was just created, so wipe any previous widgets
@@ -499,6 +501,33 @@ public class LauncherProvider extends ContentProvider {
                     LauncherSettings.WorkspaceScreens._ID + " INTEGER," +
                     LauncherSettings.WorkspaceScreens.SCREEN_RANK + " INTEGER," +
                     LauncherSettings.ChangeLogColumns.MODIFIED + " INTEGER NOT NULL DEFAULT 0" +
+                    ");");
+        }
+
+        private void createAllAppsTable(SQLiteDatabase db, long userSerialNumber){
+            db.execSQL("CREATE TABLE allapps (" +
+                    "_id INTEGER PRIMARY KEY," +
+                    "title TEXT," +
+                    "intent TEXT," +
+                    "container INTEGER," +
+                    "screen INTEGER," +
+                    "cellX INTEGER," +
+                    "cellY INTEGER," +
+                    "spanX INTEGER," +
+                    "spanY INTEGER," +
+                    "itemType INTEGER," +
+                    "appWidgetId INTEGER NOT NULL DEFAULT -1," +
+                    "isShortcut INTEGER," +
+                    "iconType INTEGER," +
+                    "iconPackage TEXT," +
+                    "iconResource TEXT," +
+                    "icon BLOB," +
+                    "uri TEXT," +
+                    "displayMode INTEGER," +
+                    "appWidgetProvider TEXT," +
+                    "modified INTEGER NOT NULL DEFAULT 0," +
+                    "restored INTEGER NOT NULL DEFAULT 0," +
+                    "profileId INTEGER DEFAULT " + userSerialNumber +
                     ");");
         }
 
