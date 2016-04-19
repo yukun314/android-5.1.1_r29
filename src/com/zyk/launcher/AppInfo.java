@@ -88,6 +88,10 @@ public class AppInfo extends ItemInfo {
         this.user = user;
     }
 
+    public AppInfo(UserHandleCompat user){
+        this.user = user;
+    }
+
     public static int initFlags(LauncherActivityInfoCompat info) {
         int appFlags = info.getApplicationInfo().flags;
         int flags = 0;

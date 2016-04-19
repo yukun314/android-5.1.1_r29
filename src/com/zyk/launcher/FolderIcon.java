@@ -699,12 +699,12 @@ public class FolderIcon extends FrameLayout implements FolderListener {
         requestLayout();
     }
 
-    public void onAdd(ShortcutInfo item) {
+    public void onAdd(ItemInfo item) {
         invalidate();
         requestLayout();
     }
 
-    public void onRemove(ShortcutInfo item) {
+    public void onRemove(ItemInfo item) {
         invalidate();
         requestLayout();
     }

@@ -273,6 +273,29 @@ public class IconCache {
         }
     }
 
+    /**
+     * Fill in "shortcutInfo" with the icon and label for "info."
+     */
+    public synchronized void getTitleAndIcon(AppInfo appInfo, Intent intent,
+                                             UserHandleCompat user, boolean usePkgIcon) {
+        ComponentName component = intent.getComponent();
+        // null info means not installed, but if we have a component from the intent then
+        // we should still look in the cache for restored app icons.
+        if (component == null) {
+            appInfo.iconBitmap = getDefaultIcon(user);
+            appInfo.title = "";
+//            appInfo.usingFallbackIcon = true;
+        } else {
+            LauncherActivityInfoCompat launcherActInfo =
+                    mLauncherApps.resolveActivity(intent, user);
+            CacheEntry entry = cacheLocked(component, launcherActInfo, null, user, usePkgIcon);
+
+            appInfo.iconBitmap = entry.icon;
+            appInfo.title = entry.title;
+//            appInfo.usingFallbackIcon = isDefaultIcon(entry.icon, user);
+        }
+    }
+
 
     public synchronized Bitmap getDefaultIcon(UserHandleCompat user) {
         if (!mDefaultIcons.containsKey(user)) {

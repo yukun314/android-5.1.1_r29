@@ -408,8 +408,7 @@ public class DeviceProfile {
 
         int maxRows = (isLandscape ? maxShortEdgeCellCount : maxLongEdgeCellCount);
         int maxCols = (isLandscape ? maxLongEdgeCellCount : maxShortEdgeCellCount);
-        //maxRowa = maxLongEdgeCellCount 影响了结果的正确
-        //maxCols = maxShortEdgeCellCount
+
         if (allAppsShortEdgeCount > 0 && allAppsLongEdgeCount > 0) {
             allAppsNumRows = isLandscape ? allAppsShortEdgeCount : allAppsLongEdgeCount;
             allAppsNumCols = isLandscape ? allAppsLongEdgeCount : allAppsShortEdgeCount;
@@ -417,11 +416,9 @@ public class DeviceProfile {
             allAppsNumRows = (availableHeightPx - pageIndicatorHeightPx - hotseatBarHeightPx) /
                     (allAppsCellHeightPx + allAppsCellPaddingPx);
             allAppsNumRows = Math.max(minEdgeCellCount, Math.min(maxRows, allAppsNumRows));
-//            allAppsNumRows = Math.max(minEdgeCellCount, allAppsNumRows);
             allAppsNumCols = (availableWidthPx) /
                     (allAppsCellWidthPx + allAppsCellPaddingPx);
             allAppsNumCols = Math.max(minEdgeCellCount, Math.min(maxCols, allAppsNumCols));
-//            allAppsNumCols = Math.max(minEdgeCellCount, allAppsNumCols);
         }
     }
 

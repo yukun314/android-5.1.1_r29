@@ -343,25 +343,25 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
         return mInfo;
     }
 
-    private class GridComparator implements Comparator<ShortcutInfo> {
+    private class GridComparator implements Comparator<ItemInfo> {
         int mNumCols;
         public GridComparator(int numCols) {
             mNumCols = numCols;
         }
 
         @Override
-        public int compare(ShortcutInfo lhs, ShortcutInfo rhs) {
+        public int compare(ItemInfo lhs, ItemInfo rhs) {
             int lhIndex = lhs.cellY * mNumCols + lhs.cellX;
             int rhIndex = rhs.cellY * mNumCols + rhs.cellX;
             return (lhIndex - rhIndex);
         }
     }
 
-    private void placeInReadingOrder(ArrayList<ShortcutInfo> items) {
+    private void placeInReadingOrder(ArrayList<ItemInfo> items) {
         int maxX = 0;
         int count = items.size();
         for (int i = 0; i < count; i++) {
-            ShortcutInfo item = items.get(i);
+            ItemInfo item = items.get(i);
             if (item.cellX > maxX) {
                 maxX = item.cellX;
             }
@@ -373,7 +373,7 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
         for (int i = 0; i < count; i++) {
             int x = i % countX;
             int y = i / countX;
-            ShortcutInfo item = items.get(i);
+            ItemInfo item = items.get(i);
             item.cellX = x;
             item.cellY = y;
         }
@@ -381,12 +381,13 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
 
     void bind(FolderInfo info) {
         mInfo = info;
-        ArrayList<ShortcutInfo> children = info.contents;
+        ArrayList<ItemInfo> children = info.contents;
         ArrayList<ShortcutInfo> overflow = new ArrayList<ShortcutInfo>();
         setupContentForNumItems(children.size());
         placeInReadingOrder(children);
         int count = 0;
         for (int i = 0; i < children.size(); i++) {
+            //FIXME AllApps 需要修改
             ShortcutInfo child = (ShortcutInfo) children.get(i);
             if (createAndAddShortcut(child) == null) {
                 overflow.add(child);
@@ -1179,11 +1180,14 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
                 View child = null;
                 // Move the item from the folder to the workspace, in the position of the folder
                 if (getItemCount() == 1) {
-                    ShortcutInfo finalItem = mInfo.contents.get(0);
-                    child = mLauncher.createShortcut(R.layout.application, cellLayout,
-                            finalItem);
-                    LauncherModel.addOrMoveItemInDatabase(mLauncher, finalItem, mInfo.container,
-                            mInfo.screenId, mInfo.cellX, mInfo.cellY);
+                    ItemInfo info = mInfo.contents.get(0);
+                    if(info instanceof ShortcutInfo) {
+                        ShortcutInfo finalItem = (ShortcutInfo)info;
+                        child = mLauncher.createShortcut(R.layout.application, cellLayout,
+                                        finalItem);
+                        LauncherModel.addOrMoveItemInDatabase(mLauncher, finalItem, mInfo.container,
+                                mInfo.screenId, mInfo.cellX, mInfo.cellY);
+                    }
                 }
                 if (getItemCount() <= 1) {
                     // Remove the folder
@@ -1312,35 +1316,43 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
         v.setVisibility(VISIBLE);
     }
 
-    public void onAdd(ShortcutInfo item) {
-        mItemsInvalidated = true;
-        // If the item was dropped onto this open folder, we have done the work associated
-        // with adding the item to the folder, as indicated by mSuppressOnAdd being set
-        if (mSuppressOnAdd) return;
-        if (!findAndSetEmptyCells(item)) {
-            // The current layout is full, can we expand it?
-            setupContentForNumItems(getItemCount() + 1);
-            findAndSetEmptyCells(item);
+    //FIXME AppInfo 还未处理
+    public void onAdd(ItemInfo info) {
+        if(info instanceof ShortcutInfo) {
+            ShortcutInfo item = (ShortcutInfo)info;
+            mItemsInvalidated = true;
+            // If the item was dropped onto this open folder, we have done the work associated
+            // with adding the item to the folder, as indicated by mSuppressOnAdd being set
+            if (mSuppressOnAdd) return;
+            if (!findAndSetEmptyCells(item)) {
+                // The current layout is full, can we expand it?
+                setupContentForNumItems(getItemCount() + 1);
+                findAndSetEmptyCells(item);
+            }
+            createAndAddShortcut(item);
+            LauncherModel.addOrMoveItemInDatabase(
+                    mLauncher, item, mInfo.id, 0, item.cellX, item.cellY);
         }
-        createAndAddShortcut(item);
-        LauncherModel.addOrMoveItemInDatabase(
-                mLauncher, item, mInfo.id, 0, item.cellX, item.cellY);
     }
 
-    public void onRemove(ShortcutInfo item) {
-        mItemsInvalidated = true;
-        // If this item is being dragged from this open folder, we have already handled
-        // the work associated with removing the item, so we don't have to do anything here.
-        if (item == mCurrentDragInfo) return;
-        View v = getViewForInfo(item);
-        mContent.removeView(v);
-        if (mState == STATE_ANIMATING) {
-            mRearrangeOnClose = true;
-        } else {
-            setupContentForNumItems(getItemCount());
-        }
-        if (getItemCount() <= 1) {
-            replaceFolderWithFinalItem();
+    //FIXME 还未处理
+    public void onRemove(ItemInfo info) {
+        if(info instanceof ShortcutInfo) {
+            ShortcutInfo item = (ShortcutInfo)info;
+            mItemsInvalidated = true;
+            // If this item is being dragged from this open folder, we have already handled
+            // the work associated with removing the item, so we don't have to do anything here.
+            if (item == mCurrentDragInfo) return;
+            View v = getViewForInfo(item);
+            mContent.removeView(v);
+            if (mState == STATE_ANIMATING) {
+                mRearrangeOnClose = true;
+            } else {
+                setupContentForNumItems(getItemCount());
+            }
+            if (getItemCount() <= 1) {
+                replaceFolderWithFinalItem();
+            }
         }
     }
 

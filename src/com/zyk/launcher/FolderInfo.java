@@ -16,6 +16,7 @@
 
 package com.zyk.launcher;
 
+import android.content.ClipData;
 import android.content.ContentValues;
 import android.content.Context;
 
@@ -37,7 +38,7 @@ public class FolderInfo extends ItemInfo {
     /**
      * The apps and shortcuts
      */
-    ArrayList<ShortcutInfo> contents = new ArrayList<ShortcutInfo>();
+    ArrayList<ItemInfo> contents = new ArrayList<ItemInfo>();
 
     ArrayList<FolderListener> listeners = new ArrayList<FolderListener>();
 
@@ -51,7 +52,7 @@ public class FolderInfo extends ItemInfo {
      *
      * @param item
      */
-    public void add(ShortcutInfo item) {
+    public void add(ItemInfo item) {
         contents.add(item);
         for (int i = 0; i < listeners.size(); i++) {
             listeners.get(i).onAdd(item);
@@ -64,7 +65,7 @@ public class FolderInfo extends ItemInfo {
      *
      * @param item
      */
-    public void remove(ShortcutInfo item) {
+    public void remove(ItemInfo item) {
         contents.remove(item);
         for (int i = 0; i < listeners.size(); i++) {
             listeners.get(i).onRemove(item);
@@ -108,8 +109,8 @@ public class FolderInfo extends ItemInfo {
     }
 
     interface FolderListener {
-        public void onAdd(ShortcutInfo item);
-        public void onRemove(ShortcutInfo item);
+        public void onAdd(ItemInfo item);
+        public void onRemove(ItemInfo item);
         public void onTitleChanged(CharSequence title);
         public void onItemsChanged();
     }
