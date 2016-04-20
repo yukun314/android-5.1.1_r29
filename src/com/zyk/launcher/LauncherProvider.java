@@ -72,6 +72,7 @@ public class LauncherProvider extends ContentProvider {
     static final String TABLE_FAVORITES = "favorites";
     static final String TABLE_ALLAPPS = "allapps";
     static final String TABLE_WORKSPACE_SCREENS = "workspaceScreens";
+    static final String TABLE_ALLAPP_SCREENS = "allappScreens";
     static final String PARAMETER_NOTIFY = "notify";
     static final String UPGRADED_FROM_OLD_DATABASE =
             "UPGRADED_FROM_OLD_DATABASE";
@@ -528,6 +529,12 @@ public class LauncherProvider extends ContentProvider {
                     "modified INTEGER NOT NULL DEFAULT 0," +
                     "restored INTEGER NOT NULL DEFAULT 0," +
                     "profileId INTEGER DEFAULT " + userSerialNumber +
+                    ");");
+
+            db.execSQL("CREATE TABLE " + TABLE_ALLAPP_SCREENS + " (" +
+                    LauncherSettings.AllAppScreens._ID + " INTEGER," +
+                    LauncherSettings.AllAppScreens.SCREEN_RANK + " INTEGER," +
+                    LauncherSettings.ChangeLogColumns.MODIFIED + " INTEGER NOT NULL DEFAULT 0" +
                     ");");
         }
 

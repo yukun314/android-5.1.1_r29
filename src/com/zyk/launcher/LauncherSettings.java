@@ -100,6 +100,26 @@ public class LauncherSettings {
     }
 
     /**
+     * AllApps Screens.
+     *
+     * Tracks the order of workspace screens.
+     */
+    static final class AllAppScreens implements ChangeLogColumns {
+        /**
+         * The content:// style URL for this table
+         */
+        static final Uri CONTENT_URI = Uri.parse("content://" +
+                LauncherProvider.AUTHORITY + "/" + LauncherProvider.TABLE_ALLAPP_SCREENS +
+                "?" + LauncherProvider.PARAMETER_NOTIFY + "=true");
+
+        /**
+         * The rank of this screen -- ie. how it is ordered relative to the other screens.
+         * <P>Type: INTEGER</P>
+         */
+        static final String SCREEN_RANK = "screenRank";
+    }
+
+    /**
      * Workspace Screens.
      *
      * Tracks the order of workspace screens.
@@ -148,7 +168,7 @@ public class LauncherSettings {
          */
         static Uri getContentUri(long id, boolean notify) {
             return Uri.parse("content://" + LauncherProvider.AUTHORITY +
-                    "/" + LauncherProvider.TABLE_FAVORITES + "/" + id + "?" +
+                    "/" + LauncherProvider.TABLE_ALLAPPS + "/" + id + "?" +
                     LauncherProvider.PARAMETER_NOTIFY + "=" + notify);
         }
 

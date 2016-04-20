@@ -1503,6 +1503,28 @@ public class Launcher extends Activity
         return favorite;
     }
 
+    View createAllApp(AppInfo info) {
+        return createAllApp(R.layout.apps_customize_application,
+                mAppsCustomizeContent.getScreenWithId(info.screenId), info);
+    }
+
+    View createAllApp(int layoutResId, AppsCustomizeCellLayout parent, AppInfo info) {
+        BubbleTextView icon = (BubbleTextView) mInflater.inflate(layoutResId, parent, false);
+        icon.applyFromApplicationInfo(info);
+        icon.setOnClickListener(this);
+        icon.setOnLongClickListener(mAppsCustomizeContent);
+        icon.setOnTouchListener(mAppsCustomizeContent);
+        icon.setOnKeyListener(mAppsCustomizeContent);
+//        icon.setOnFocusChangeListener(parent.mFocusHandlerView);
+        //FIXME 界面上所有字体要统一设置 此为暂时
+        icon.setTextColor(Color.BLACK);
+        //FIXME 根据需要在定怎么设置 暂时先设置成透明
+        //父控件还有背景 所以这里和其父控件要同时设置才能看到效果
+        //父控件layout 见939行
+        icon.setBackgroundColor(Color.TRANSPARENT);
+        return icon;
+    }
+
     /**
      * Add a shortcut to the workspace.
      *
@@ -4176,6 +4198,23 @@ public class Launcher extends Activity
     }
 
     @Override
+    public void bindAllAppsScreens(ArrayList<Long> orderedScreenIds) {
+        bindAddAllAppsScreens(orderedScreenIds);
+
+        // If there are no screens, we need to have an empty screen
+        if (orderedScreenIds.size() == 0) {
+            mAppsCustomizeContent.addExtraEmptyScreen();
+        }
+
+////         Create the custom content page (this call updates mDefaultScreen which calls
+////         setCurrentPage() so ensure that all pages are added before calling this).
+//        if (hasCustomContentToLeft()) {
+//            mAppsCustomizeContent.createCustomContentContainer();
+//            populateCustomContentContainer();
+//        }
+    }
+
+    @Override
     public void bindAddScreens(ArrayList<Long> orderedScreenIds) {
         // Log to disk
         Launcher.addDumpLog(TAG, "11683562 - bindAddScreens()", true);
@@ -4184,6 +4223,18 @@ public class Launcher extends Activity
         int count = orderedScreenIds.size();
         for (int i = 0; i < count; i++) {
             mWorkspace.insertNewWorkspaceScreenBeforeEmptyScreen(orderedScreenIds.get(i));
+        }
+    }
+
+    @Override
+    public void bindAddAllAppsScreens(ArrayList<Long> orderedScreenIds) {
+        // Log to disk
+        Launcher.addDumpLog(TAG, "11683562 - bindAddAllAppsScreens()", true);
+        Launcher.addDumpLog(TAG, "11683562 -   orderedScreenIds: " +
+                TextUtils.join(", ", orderedScreenIds), true);
+        int count = orderedScreenIds.size();
+        for (int i = 0; i < count; i++) {
+            mAppsCustomizeContent.insertNewAllAppsScreenBeforeEmptyScreen(orderedScreenIds.get(i));
         }
     }
 
@@ -4358,10 +4409,83 @@ public class Launcher extends Activity
         workspace.requestLayout();
     }
 
+
+    /**
+     * Bind the items start-end from the list.
+     *
+     * Implementation of the method from LauncherModel.Callbacks.
+     */
+    public void bindAllAppItems(final ArrayList<ItemInfo> allApps) {
+        Runnable r = new Runnable() {
+            public void run() {
+                bindAllAppItems(allApps);
+            }
+        };
+        if (waitUntilResume(r)) {
+            return;
+        }
+//FIXME 实际绑定的实现
+        mAppsCustomizeContent.removeAllViews();
+        int count = allApps.size();
+        for(int i = 0;i<count;i++) {
+            ItemInfo item = allApps.get(i);
+            switch (item.itemType) {
+                case LauncherSettings.Allapps.ITEM_TYPE_APPLICATION:
+                case LauncherSettings.Allapps.ITEM_TYPE_SHORTCUT:
+                    AppInfo info = (AppInfo) item;
+                    View shortcut = createAllApp(info);
+                    CellLayout cl = mAppsCustomizeContent.getScreenWithId(item.screenId);
+                    if (cl != null && cl.isOccupied(item.cellX, item.cellY)) {
+                        View v = cl.getChildAt(item.cellX, item.cellY);
+                        Object tag = v.getTag();
+                        String desc = "Collision while binding AllApps item: " + item
+                                + ". Collides with " + tag;
+                        if (LauncherAppState.isDogfoodBuild()) {
+                            throw (new RuntimeException(desc));
+                        } else {
+                            Log.d(TAG, desc);
+                        }
+                    }
+                    mAppsCustomizeContent.addInScreenFromBind(shortcut, item.screenId, item.cellX,
+                            item.cellY, 1, 1);
+                    break;
+                case LauncherSettings.Allapps.ITEM_TYPE_FOLDER:
+                    FolderIcon newFolder = FolderIcon.fromXml(R.layout.folder_icon, this,
+                            mAppsCustomizeContent.getScreenWithId(item.screenId),
+                            (FolderInfo) item, mIconCache);
+                    mAppsCustomizeContent.addInScreenFromBind(newFolder, item.screenId, item.cellX,
+                            item.cellY, 1, 1);
+                    break;
+                default:
+                    throw new RuntimeException("Invalid Item Type");
+            }
+        }
+        mAppsCustomizeContent.enableHwLayersOnVisiblePages();
+        mAppsCustomizeContent.requestLayout();
+    }
+
+
     /**
      * Implementation of the method from LauncherModel.Callbacks.
      */
     public void bindFolders(final HashMap<Long, FolderInfo> folders) {
+        Runnable r = new Runnable() {
+            public void run() {
+                bindFolders(folders);
+            }
+        };
+        if (waitUntilResume(r)) {
+            return;
+        }
+        sFolders.clear();
+        sFolders.putAll(folders);
+    }
+
+    /**
+     * Implementation of the method from LauncherModel.Callbacks.
+     */
+    //FIXME 要修改 稍后
+    public void bindAllAppsFolders(final HashMap<Long, FolderInfo> folders) {
         Runnable r = new Runnable() {
             public void run() {
                 bindFolders(folders);

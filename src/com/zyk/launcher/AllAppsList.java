@@ -44,6 +44,13 @@ class AllAppsList {
     /** The list of apps that have been modified since the last notify() call. */
     public ArrayList<AppInfo> modified = new ArrayList<AppInfo>();
 
+    /**
+     * which expects a list of all folders and shortcuts created by LauncherModel that are
+     * directly on the home screen (however, no widgets or  shortcuts within folders).
+     * 界面使用数据改为使用此List
+     */
+    public ArrayList<ItemInfo> allApps = new ArrayList<ItemInfo>();
+
     private IconCache mIconCache;
 
     private AppFilter mAppFilter;

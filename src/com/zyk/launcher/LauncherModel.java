@@ -158,6 +158,10 @@ public class LauncherModel extends BroadcastReceiver
     // LauncherModel to their ids
     static final HashMap<Long, ItemInfo> sBgItemsIdMap = new HashMap<Long, ItemInfo>();
 
+    // sAllAppsItemsIdMap maps *all* the ItemInfos (shortcuts, folders) created by
+    // LauncherModel to their ids
+    static final HashMap<Long, ItemInfo> sAllAppsItemsIdMap = new HashMap<Long, ItemInfo>();
+
     // sBgWorkspaceItems is passed to bindItems, which expects a list of all folders and shortcuts
     //       created by LauncherModel that are directly on the home screen (however, no widgets or
     //       shortcuts within folders).
@@ -170,11 +174,17 @@ public class LauncherModel extends BroadcastReceiver
     // sBgFolders is all FolderInfos created by LauncherModel. Passed to bindFolders()
     static final HashMap<Long, FolderInfo> sBgFolders = new HashMap<Long, FolderInfo>();
 
+    // sAllAppsFolders is all FolderInfos created by LauncherModel. Passed to bindFolders()
+    static final HashMap<Long, FolderInfo> sAllAppsFolders = new HashMap<Long, FolderInfo>();
+
     // sBgDbIconCache is the set of ItemInfos that need to have their icons updated in the database
     static final HashMap<Object, byte[]> sBgDbIconCache = new HashMap<Object, byte[]>();
 
     // sBgWorkspaceScreens is the ordered set of workspace screens.
     static final ArrayList<Long> sBgWorkspaceScreens = new ArrayList<Long>();
+
+    // sAllAppsScreens is the ordered set of AllApps screens.
+    static final ArrayList<Long> sAllAppsScreens = new ArrayList<Long>();
 
     // sPendingPackages is a set of packages which could be on sdcard and are not available yet
     static final HashMap<UserHandleCompat, HashSet<String>> sPendingPackages =
@@ -211,12 +221,22 @@ public class LauncherModel extends BroadcastReceiver
          */
         public void bindItems(ArrayList<ItemInfo> shortcuts, int start, int end,
                               boolean forceAnimateIcons);
+
+        public void bindAllAppItems(ArrayList<ItemInfo> shortcuts);
+
         public void bindScreens(ArrayList<Long> orderedScreenIds);
         public void bindAddScreens(ArrayList<Long> orderedScreenIds);
+        //AllApps 界面绑定
+        public void bindAllAppsScreens(ArrayList<Long> orderedScreenIds);
+        public void bindAddAllAppsScreens(ArrayList<Long> orderedScreenIds);
         /**
          *加载folder的内容
          */
         public void bindFolders(HashMap<Long,FolderInfo> folders);
+        /**
+         *加载AllApp界面folder的内容
+         */
+        public void bindAllAppsFolders(HashMap<Long,FolderInfo> folders);
         /**
          *数据加载完成。
          */
@@ -1290,6 +1310,60 @@ public class LauncherModel extends BroadcastReceiver
         runOnWorkerThread(r);
     }
 
+
+
+    /**
+     * Update the order of the allApps screens in the database. The array list contains
+     * a list of screen ids in the order that they should appear.
+     */
+    void updateAllAppsScreenOrder(Context context, final ArrayList<Long> screens) {
+        // Log to disk
+        Launcher.addDumpLog(TAG, "11683562 - updateAllAppsScreenOrder()", true);
+        Launcher.addDumpLog(TAG, "11683562 -   screens: " + TextUtils.join(", ", screens), true);
+
+        final ArrayList<Long> screensCopy = new ArrayList<Long>(screens);
+        final ContentResolver cr = context.getContentResolver();
+        final Uri uri = LauncherSettings.AllAppScreens.CONTENT_URI;
+
+        // Remove any negative screen ids -- these aren't persisted
+        Iterator<Long> iter = screensCopy.iterator();
+        while (iter.hasNext()) {
+            long id = iter.next();
+            if (id < 0) {
+                iter.remove();
+            }
+        }
+
+        Runnable r = new Runnable() {
+            @Override
+            public void run() {
+                ArrayList<ContentProviderOperation> ops = new ArrayList<ContentProviderOperation>();
+                // Clear the table
+                ops.add(ContentProviderOperation.newDelete(uri).build());
+                int count = screensCopy.size();
+                for (int i = 0; i < count; i++) {
+                    ContentValues v = new ContentValues();
+                    long screenId = screensCopy.get(i);
+                    v.put(LauncherSettings.AllAppScreens._ID, screenId);
+                    v.put(LauncherSettings.AllAppScreens.SCREEN_RANK, i);
+                    ops.add(ContentProviderOperation.newInsert(uri).withValues(v).build());
+                }
+
+                try {
+                    cr.applyBatch(LauncherProvider.AUTHORITY, ops);
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+
+                synchronized (sBgLock) {
+                    sAllAppsScreens.clear();
+                    sAllAppsScreens.addAll(screensCopy);
+                }
+            }
+        };
+        runOnWorkerThread(r);
+    }
+
     /**
      * Remove the contents of the specified folder from the database
      */
@@ -1567,6 +1641,42 @@ public class LauncherModel extends BroadcastReceiver
         return orderedScreens;
     }
 
+    /** Loads the workspace screens db into a map of Rank -> ScreenId */
+    private static TreeMap<Integer, Long> loadAllAppScreensDb(Context context) {
+        final ContentResolver contentResolver = context.getContentResolver();
+        final Uri screensUri = LauncherSettings.AllAppScreens.CONTENT_URI;
+        final Cursor sc = contentResolver.query(screensUri, null, null, null, null);
+        TreeMap<Integer, Long> orderedScreens = new TreeMap<Integer, Long>();
+
+        try {
+            final int idIndex = sc.getColumnIndexOrThrow(
+                    LauncherSettings.WorkspaceScreens._ID);
+            final int rankIndex = sc.getColumnIndexOrThrow(
+                    LauncherSettings.WorkspaceScreens.SCREEN_RANK);
+            while (sc.moveToNext()) {
+                try {
+                    long screenId = sc.getLong(idIndex);
+                    int rank = sc.getInt(rankIndex);
+                    orderedScreens.put(rank, screenId);
+                } catch (Exception e) {
+                    Launcher.addDumpLog(TAG, "Desktop items loading interrupted - invalid screens: " + e, true);
+                }
+            }
+        } finally {
+            sc.close();
+        }
+
+        // Log to disk
+        Launcher.addDumpLog(TAG, "11683562 - loadWorkspaceScreensDb()", true);
+        ArrayList<String> orderedScreensPairs= new ArrayList<String>();
+        for (Integer i : orderedScreens.keySet()) {
+            orderedScreensPairs.add("{ " + i + ": " + orderedScreens.get(i) + " }");
+        }
+        Launcher.addDumpLog(TAG, "11683562 -   screens: " +
+                TextUtils.join(", ", orderedScreensPairs), true);
+        return orderedScreens;
+    }
+
     public boolean isAllAppsLoaded() {
         return mAllAppsLoaded;
     }
@@ -1705,7 +1815,7 @@ public class LauncherModel extends BroadcastReceiver
             bindWorkspace(synchronousBindPage, false);
             // XXX: For now, continue posting the binding of AllApps as there are other issues that
             //      arise from that.
-            onlyBindAllApps();
+            BindAllApps();
         }
 
         public void run() {
@@ -2667,6 +2777,26 @@ public class LauncherModel extends BroadcastReceiver
             runOnMainThread(r, MAIN_THREAD_BINDING_RUNNABLE);
         }
 
+        private void bindAllAppsScreens(final Callbacks oldCallbacks,
+                                          final ArrayList<Long> orderedScreens) {
+            final Runnable r = new Runnable() {
+                @Override
+                public void run() {
+                    Callbacks callbacks = tryGetCallbacks(oldCallbacks);
+                    if (callbacks != null) {
+                        callbacks.bindAllAppsScreens(orderedScreens);
+                    }
+                }
+            };
+//            runOnMainThread(r, MAIN_THREAD_BINDING_RUNNABLE);
+            boolean isRunningOnMainThread = !(sWorkerThread.getThreadId() == Process.myTid());
+            if (isRunningOnMainThread) {
+                r.run();
+            } else {
+                mHandler.post(r);
+            }
+        }
+
         private void bindWorkspaceItems(final Callbacks oldCallbacks,
                 final ArrayList<ItemInfo> workspaceItems,
                 final ArrayList<LauncherAppWidgetInfo> appWidgets,
@@ -2870,7 +3000,12 @@ public class LauncherModel extends BroadcastReceiver
             if (DEBUG_LOADERS) {
                 Log.d(TAG, "loadAndBindAllApps mAllAppsLoaded=" + mAllAppsLoaded);
             }
+            sAllAppsItemsIdMap.clear();
+            sAllAppsScreens.clear();
+            sAllAppsFolders.clear();
+
             if (!mAllAppsLoaded) {
+                //加载数据
                 loadAllApps();
                 synchronized (LoaderTask.this) {
                     if (mStopped) {
@@ -2878,36 +3013,80 @@ public class LauncherModel extends BroadcastReceiver
                     }
                     mAllAppsLoaded = true;
                 }
-            } else {
-                onlyBindAllApps();
             }
+            //绑定
+            BindAllApps();
         }
 
-        private void onlyBindAllApps() {
+        private void BindAllApps() {
             final Callbacks oldCallbacks = mCallbacks.get();
             if (oldCallbacks == null) {
                 // This launcher has exited and nobody bothered to tell us.  Just bail.
                 Log.w(TAG, "LoaderTask running with no launcher (onlyBindAllApps)");
                 return;
             }
+            //FIXME
+            //在这里判断如果是第一次时 走原来的流程(修改绑定部分 把位置信息更新到数据库)，
+            //否则 按新方法来(按照workspace形式)
+            if(sAllAppsItemsIdMap.size() == 0 && sAllAppsScreens.size() == 0) {//第一次启动
+                // shallow copy
+                @SuppressWarnings("unchecked")
+                final ArrayList<AppInfo> list
+                        = (ArrayList<AppInfo>) mBgAllAppsList.data.clone();
+                Runnable r = new Runnable() {
+                    public void run() {
+                        final long t = SystemClock.uptimeMillis();
+                        final Callbacks callbacks = tryGetCallbacks(oldCallbacks);
+                        if (callbacks != null) {
+                            callbacks.bindAllApplications(list);
+                        }
+                        if (DEBUG_LOADERS) {
+                            Log.d(TAG, "bound all " + list.size() + " apps from cache in "
+                                    + (SystemClock.uptimeMillis()-t) + "ms");
+                        }
+                    }
+                };
+                toRun(r);
+            } else {
 
-            // shallow copy
-            @SuppressWarnings("unchecked")
-            final ArrayList<AppInfo> list
-                    = (ArrayList<AppInfo>) mBgAllAppsList.data.clone();
-            Runnable r = new Runnable() {
-                public void run() {
-                    final long t = SystemClock.uptimeMillis();
-                    final Callbacks callbacks = tryGetCallbacks(oldCallbacks);
-                    if (callbacks != null) {
-                        callbacks.bindAllApplications(list);
-                    }
-                    if (DEBUG_LOADERS) {
-                        Log.d(TAG, "bound all " + list.size() + " apps from cache in "
-                                + (SystemClock.uptimeMillis()-t) + "ms");
-                    }
+                // Save a copy of all the bg-thread collections
+                final ArrayList<ItemInfo> allAppsItems = new ArrayList<ItemInfo>();
+                final HashMap<Long, FolderInfo> folders = new HashMap<Long, FolderInfo>();
+                final ArrayList<Long> orderedScreenIds = new ArrayList<Long>();
+                synchronized (sBgLock) {
+                    allAppsItems.addAll(mBgAllAppsList.allApps);
+                    folders.putAll(sAllAppsFolders);
+                    orderedScreenIds.addAll(sAllAppsScreens);
                 }
-            };
+                //绑定屏幕
+                bindAllAppsScreens(oldCallbacks, orderedScreenIds);
+                //绑定allApps
+                Runnable r = new Runnable(){
+                    @Override
+                    public void run() {
+                        Callbacks callbacks = tryGetCallbacks(oldCallbacks);
+                        if (callbacks != null) {
+                            callbacks.bindAllAppItems(allAppsItems);
+                        }
+                    }
+                };
+                toRun(r);
+                //绑定文件夹
+                r = new Runnable(){
+                    @Override
+                    public void run() {
+                        Callbacks callbacks = tryGetCallbacks(oldCallbacks);
+                        if (callbacks != null) {
+                            callbacks.bindAllAppsFolders(folders);
+                        }
+                    }
+                };
+                toRun(r);
+
+            }
+        }
+
+        private void toRun(Runnable r){
             boolean isRunningOnMainThread = !(sWorkerThread.getThreadId() == Process.myTid());
             if (isRunningOnMainThread) {
                 r.run();
@@ -2917,7 +3096,7 @@ public class LauncherModel extends BroadcastReceiver
         }
 
         private void loadAllApps() {
-            final long loadTime = DEBUG_LOADERS ? SystemClock.uptimeMillis() : 0;
+//            final long loadTime = DEBUG_LOADERS ? SystemClock.uptimeMillis() : 0;
 
             final Callbacks oldCallbacks = mCallbacks.get();
             if (oldCallbacks == null) {
@@ -2969,18 +3148,14 @@ public class LauncherModel extends BroadcastReceiver
                         Log.d(TAG, "sort took "
                                 + (SystemClock.uptimeMillis()-sortTime) + "ms");
                     }
-                    //FIXME 流程还要修改 先做下添加数据的测试
                     // Create the ApplicationInfos
                     for (int i = 0; i < apps.size(); i++) {
                         LauncherActivityInfoCompat app = apps.get(i);
                         // This builds the icon bitmaps.
                         AppInfo itemInfo = new AppInfo(mContext, app, user, mIconCache, mLabelCache);
                         itemInfo.container = LauncherSettings.Allapps.CONTAINER_ALLAPPS;
-                        //FIXME 下面三条需要修改
-                        itemInfo.screenId = 1;
-                        itemInfo.cellX = 1;
-                        itemInfo.cellY = 1;
                         mBgAllAppsList.add(itemInfo);
+                        mBgAllAppsList.allApps.add(itemInfo);
                         addAllAppsItemToDatabase(mContext, itemInfo,false);
                     }
 
@@ -3005,93 +3180,94 @@ public class LauncherModel extends BroadcastReceiver
                 }
             }
 
-            // Huh? Shouldn't this be inside the Runnable below?
-            final ArrayList<AppInfo> added = mBgAllAppsList.added;
-            mBgAllAppsList.added = new ArrayList<AppInfo>();
-
-            // Post callback on main thread
-            mHandler.post(new Runnable() {
-                public void run() {
-                    final long bindTime = SystemClock.uptimeMillis();
-                    final Callbacks callbacks = tryGetCallbacks(oldCallbacks);
-                    if (callbacks != null) {
-                        callbacks.bindAllApplications(added);
-                        if (DEBUG_LOADERS) {
-                            Log.d(TAG, "bound " + added.size() + " apps in "
-                                + (SystemClock.uptimeMillis() - bindTime) + "ms");
-                        }
-                    } else {
-                        Log.i(TAG, "not binding apps: no Launcher activity");
-                    }
-                }
-            });
-
-            if (DEBUG_LOADERS) {
-                Log.d(TAG, "Icons processed in "
-                        + (SystemClock.uptimeMillis() - loadTime) + "ms");
-            }
+//            // Huh? Shouldn't this be inside the Runnable below?
+//            final ArrayList<AppInfo> added = mBgAllAppsList.added;
+//            mBgAllAppsList.added = new ArrayList<AppInfo>();
+//
+//            // Post callback on main thread
+//            mHandler.post(new Runnable() {
+//                public void run() {
+//                    final long bindTime = SystemClock.uptimeMillis();
+//                    final Callbacks callbacks = tryGetCallbacks(oldCallbacks);
+//                    if (callbacks != null) {
+//                        callbacks.bindAllApplications(added);
+//                        if (DEBUG_LOADERS) {
+//                            Log.d(TAG, "bound " + added.size() + " apps in "
+//                                + (SystemClock.uptimeMillis() - bindTime) + "ms");
+//                        }
+//                    } else {
+//                        Log.i(TAG, "not binding apps: no Launcher activity");
+//                    }
+//                }
+//            });
+//
+//            if (DEBUG_LOADERS) {
+//                Log.d(TAG, "Icons processed in "
+//                        + (SystemClock.uptimeMillis() - loadTime) + "ms");
+//            }
         }
 
         private void addAllAppsData(Cursor c){
             synchronized (sBgLock) {
-                final int idIndex = c.getColumnIndexOrThrow(LauncherSettings.Favorites._ID);
-                final int intentIndex = c.getColumnIndexOrThrow
-                        (LauncherSettings.Favorites.INTENT);
-                final int titleIndex = c.getColumnIndexOrThrow
-                        (LauncherSettings.Favorites.TITLE);
-                final int iconTypeIndex = c.getColumnIndexOrThrow(
-                        LauncherSettings.Favorites.ICON_TYPE);
-                final int iconIndex = c.getColumnIndexOrThrow(LauncherSettings.Favorites.ICON);
-                final int iconPackageIndex = c.getColumnIndexOrThrow(
-                        LauncherSettings.Favorites.ICON_PACKAGE);
-                final int iconResourceIndex = c.getColumnIndexOrThrow(
-                        LauncherSettings.Favorites.ICON_RESOURCE);
-                final int containerIndex = c.getColumnIndexOrThrow(
-                        LauncherSettings.Favorites.CONTAINER);
-                final int itemTypeIndex = c.getColumnIndexOrThrow(
-                        LauncherSettings.Favorites.ITEM_TYPE);
-                final int appWidgetIdIndex = c.getColumnIndexOrThrow(
-                        LauncherSettings.Favorites.APPWIDGET_ID);
-                final int appWidgetProviderIndex = c.getColumnIndexOrThrow(
-                        LauncherSettings.Favorites.APPWIDGET_PROVIDER);
-                final int screenIndex = c.getColumnIndexOrThrow(
-                        LauncherSettings.Favorites.SCREEN);
-                final int cellXIndex = c.getColumnIndexOrThrow
-                        (LauncherSettings.Favorites.CELLX);
-                final int cellYIndex = c.getColumnIndexOrThrow
-                        (LauncherSettings.Favorites.CELLY);
-                final int spanXIndex = c.getColumnIndexOrThrow
-                        (LauncherSettings.Favorites.SPANX);
-                final int spanYIndex = c.getColumnIndexOrThrow(
-                        LauncherSettings.Favorites.SPANY);
-                final int restoredIndex = c.getColumnIndexOrThrow(
-                        LauncherSettings.Favorites.RESTORED);
-                final int profileIdIndex = c.getColumnIndexOrThrow(
-                        LauncherSettings.Favorites.PROFILE_ID);
-
-                final LauncherAppsCompat launcherApps = LauncherAppsCompat.getInstance(mContext);
-                final PackageManager manager = mContext.getPackageManager();
-                final ContentResolver contentResolver = mContext.getContentResolver();
-                final Uri contentUri = LauncherSettings.Allapps.CONTENT_URI_NO_NOTIFICATION;
-                final HashSet<String> installingPkgs = PackageInstallerCompat
-                        .getInstance(mContext).updateAndGetActiveSessionCache();
-                final boolean isSdCardReady = mContext.registerReceiver(null,
-                        new IntentFilter(StartupReceiver.SYSTEM_READY)) != null;
                 final ArrayList<Long> itemsToRemove = new ArrayList<Long>();
                 final ArrayList<Long> restoredRows = new ArrayList<Long>();
-                // +1 for the hotseat (it can be larger than the workspace)
-                // Load workspace in reverse order to ensure that latest items are loaded first (and
-                // before any earlier duplicates)
-                final HashMap<Long, ItemInfo[][]> occupied = new HashMap<Long, ItemInfo[][]>();
-                String intentDescription;
-                int container;
-                long id;
-                Intent intent;
-                UserHandleCompat user;
-                AppInfo info;
+                final ContentResolver contentResolver = mContext.getContentResolver();
+                final Uri contentUri = LauncherSettings.Allapps.CONTENT_URI_NO_NOTIFICATION;
+                try {
+                    final int idIndex = c.getColumnIndexOrThrow(LauncherSettings.Favorites._ID);
+                    final int intentIndex = c.getColumnIndexOrThrow
+                            (LauncherSettings.Favorites.INTENT);
+                    final int titleIndex = c.getColumnIndexOrThrow
+                            (LauncherSettings.Favorites.TITLE);
+                    final int iconTypeIndex = c.getColumnIndexOrThrow(
+                            LauncherSettings.Favorites.ICON_TYPE);
+                    final int iconIndex = c.getColumnIndexOrThrow(LauncherSettings.Favorites.ICON);
+                    final int iconPackageIndex = c.getColumnIndexOrThrow(
+                            LauncherSettings.Favorites.ICON_PACKAGE);
+                    final int iconResourceIndex = c.getColumnIndexOrThrow(
+                            LauncherSettings.Favorites.ICON_RESOURCE);
+                    final int containerIndex = c.getColumnIndexOrThrow(
+                            LauncherSettings.Favorites.CONTAINER);
+                    final int itemTypeIndex = c.getColumnIndexOrThrow(
+                            LauncherSettings.Favorites.ITEM_TYPE);
+                    final int appWidgetIdIndex = c.getColumnIndexOrThrow(
+                            LauncherSettings.Favorites.APPWIDGET_ID);
+                    final int appWidgetProviderIndex = c.getColumnIndexOrThrow(
+                            LauncherSettings.Favorites.APPWIDGET_PROVIDER);
+                    final int screenIndex = c.getColumnIndexOrThrow(
+                            LauncherSettings.Favorites.SCREEN);
+                    final int cellXIndex = c.getColumnIndexOrThrow
+                            (LauncherSettings.Favorites.CELLX);
+                    final int cellYIndex = c.getColumnIndexOrThrow
+                            (LauncherSettings.Favorites.CELLY);
+                    final int spanXIndex = c.getColumnIndexOrThrow
+                            (LauncherSettings.Favorites.SPANX);
+                    final int spanYIndex = c.getColumnIndexOrThrow(
+                            LauncherSettings.Favorites.SPANY);
+                    final int restoredIndex = c.getColumnIndexOrThrow(
+                            LauncherSettings.Favorites.RESTORED);
+                    final int profileIdIndex = c.getColumnIndexOrThrow(
+                            LauncherSettings.Favorites.PROFILE_ID);
 
-                while (!mStopped && c.moveToNext()) {
-                    try {
+                    final LauncherAppsCompat launcherApps = LauncherAppsCompat.getInstance(mContext);
+                    final PackageManager manager = mContext.getPackageManager();
+                    final HashSet<String> installingPkgs = PackageInstallerCompat
+                            .getInstance(mContext).updateAndGetActiveSessionCache();
+                    final boolean isSdCardReady = mContext.registerReceiver(null,
+                            new IntentFilter(StartupReceiver.SYSTEM_READY)) != null;
+
+                    // +1 for the hotseat (it can be larger than the workspace)
+                    // Load workspace in reverse order to ensure that latest items are loaded first (and
+                    // before any earlier duplicates)
+                    final HashMap<Long, ItemInfo[][]> occupied = new HashMap<Long, ItemInfo[][]>();
+                    String intentDescription;
+                    int container;
+                    long id;
+                    Intent intent;
+                    UserHandleCompat user;
+                    AppInfo info;
+
+                    while (!mStopped && c.moveToNext()) {
                         int itemType = c.getInt(itemTypeIndex);
                         boolean restored = 0 != c.getInt(restoredIndex);
                         boolean allowMissingTarget = false;
@@ -3270,15 +3446,16 @@ public class LauncherModel extends BroadcastReceiver
                                         case LauncherSettings.Allapps.CONTAINER_ALLAPPS:
 //                                            sBgWorkspaceItems.add(info);
                                             mBgAllAppsList.add(info);
+                                            mBgAllAppsList.allApps.add(info);
                                             break;
                                         default:
                                             // Item is in a user folder
                                             FolderInfo folderInfo =
-                                                    findOrMakeFolder(sBgFolders, container);
+                                                    findOrMakeFolder(sAllAppsFolders, container);
                                             folderInfo.add(info);
                                             break;
                                     }
-//                                    sBgItemsIdMap.put(info.id, info);
+                                    sAllAppsItemsIdMap.put(info.id, info);
 
                                     // now that we've loaded everthing re-save it with the
                                     // icon in case it disappears somehow.
@@ -3309,9 +3486,8 @@ public class LauncherModel extends BroadcastReceiver
                                 }
 
                                 switch (container) {
-                                    case LauncherSettings.Favorites.CONTAINER_DESKTOP:
-                                    case LauncherSettings.Favorites.CONTAINER_HOTSEAT:
-                                        sBgWorkspaceItems.add(folderInfo);
+                                    case LauncherSettings.Allapps.CONTAINER_ALLAPPS:
+                                        mBgAllAppsList.allApps.add(folderInfo);
                                         break;
                                 }
 
@@ -3320,13 +3496,77 @@ public class LauncherModel extends BroadcastReceiver
                                     restoredRows.add(id);
                                 }
 
-                                sBgItemsIdMap.put(folderInfo.id, folderInfo);
-                                sBgFolders.put(folderInfo.id, folderInfo);
+                                sAllAppsItemsIdMap.put(folderInfo.id, folderInfo);
+                                sAllAppsFolders.put(folderInfo.id, folderInfo);
                                 break;
                         }
-                    } catch (Exception e) {
-                        Launcher.addDumpLog(TAG, "Desktop items loading interrupted", e, true);
                     }
+                } catch (Exception e) {
+                    Launcher.addDumpLog(TAG, "Desktop items loading interrupted", e, true);
+                }
+                if (itemsToRemove.size() > 0) {
+                    ContentProviderClient client = contentResolver.acquireContentProviderClient(
+                            contentUri);
+                    // Remove dead items
+                    for (long id : itemsToRemove) {
+                        if (DEBUG_LOADERS) {
+                            Log.d(TAG, "Removed id = " + id);
+                        }
+                        // Don't notify content observers
+                        try {
+                            client.delete(LauncherSettings.Allapps.getContentUri(id, false),
+                                    null, null);
+                        } catch (RemoteException e) {
+                            Log.w(TAG, "Could not remove id = " + id);
+                        }
+                    }
+                }
+
+                if (restoredRows.size() > 0) {
+                    ContentProviderClient updater = contentResolver.acquireContentProviderClient(
+                            contentUri);
+                    // Update restored items that no longer require special handling
+                    try {
+                        StringBuilder selectionBuilder = new StringBuilder();
+                        selectionBuilder.append(LauncherSettings.Favorites._ID);
+                        selectionBuilder.append(" IN (");
+                        selectionBuilder.append(TextUtils.join(", ", restoredRows));
+                        selectionBuilder.append(")");
+                        ContentValues values = new ContentValues();
+                        values.put(LauncherSettings.Favorites.RESTORED, 0);
+                        updater.update(LauncherSettings.Allapps.CONTENT_URI_NO_NOTIFICATION,
+                                values, selectionBuilder.toString(), null);
+                    } catch (RemoteException e) {
+                        Log.w(TAG, "Could not update restored rows");
+                    }
+                }
+                //以下是关于屏幕个数的计算，loadWorkspace方法中else的部分
+                TreeMap<Integer, Long> orderedScreens = loadAllAppScreensDb(mContext);
+                for (Integer i : orderedScreens.keySet()) {
+                    sAllAppsScreens.add(orderedScreens.get(i));
+                }
+                // Log to disk
+                Launcher.addDumpLog(TAG, "11683562 -   sBgWorkspaceScreens: " +
+                        TextUtils.join(", ", sAllAppsScreens), true);
+
+                // Remove any empty screens
+                ArrayList<Long> unusedScreens = new ArrayList<Long>(sAllAppsScreens);
+                for (ItemInfo item: sBgItemsIdMap.values()) {
+                    long screenId = item.screenId;
+                    if (item.container == LauncherSettings.Allapps.CONTAINER_ALLAPPS &&
+                            unusedScreens.contains(screenId)) {
+                        unusedScreens.remove(screenId);
+                    }
+                }
+
+                // If there are any empty screens remove them, and update.
+                if (unusedScreens.size() != 0) {
+                    // Log to disk
+                    Launcher.addDumpLog(TAG, "11683562 -   unusedScreens (to be removed): " +
+                            TextUtils.join(", ", unusedScreens), true);
+
+                    sAllAppsScreens.removeAll(unusedScreens);
+                    updateAllAppsScreenOrder(mContext, sAllAppsScreens);
                 }
             }
         }
@@ -4162,6 +4402,11 @@ public class LauncherModel extends BroadcastReceiver
         }
         info.iconBitmap = icon;
         return info;
+    }
+
+    public void insertNewAllAppScreens(Context context, ContentValues values){
+        ContentResolver cr = context.getContentResolver();
+         cr.insert(LauncherSettings.AllAppScreens.CONTENT_URI, values);
     }
 
     Bitmap getIconFromCursor(Cursor c, int iconIndex, Context context) {

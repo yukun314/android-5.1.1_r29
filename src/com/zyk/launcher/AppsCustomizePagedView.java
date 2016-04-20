@@ -60,6 +60,7 @@ import com.zyk.launcher.util.Utils;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -985,7 +986,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         }
     }
     private void setupPage(AppsCustomizeCellLayout layout) {
-        layout.setGridSize(mCellCountX, mCellCountY);
+//        layout.setGridSize(mCellCountX, mCellCountY);
 
         // Note: We force a measure here to get around the fact that when we do layout calculations
         // immediately after syncing, we don't have a proper width.  That said, we already know the
@@ -1018,45 +1019,45 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     }
 
     public void syncAppsPageItems(int page, boolean immediate) {
-        // ensure that we have the right number of items on the pages
-        final boolean isRtl = isLayoutRtl();
-        int numCells = mCellCountX * mCellCountY;
-        int startIndex = page * numCells;
-        int endIndex = Math.min(startIndex + numCells, mApps.size());
-        AppsCustomizeCellLayout layout = (AppsCustomizeCellLayout) getPageAt(page);
-
-        layout.removeAllViewsOnPage();
-        ArrayList<Object> items = new ArrayList<Object>();
-        ArrayList<Bitmap> images = new ArrayList<Bitmap>();
-        for (int i = startIndex; i < endIndex; ++i) {
-            AppInfo info = mApps.get(i);
-            BubbleTextView icon = (BubbleTextView) mLayoutInflater.inflate(
-                    R.layout.apps_customize_application, layout, false);
-            icon.applyFromApplicationInfo(info);
-            icon.setOnClickListener(mLauncher);
-            icon.setOnLongClickListener(this);
-            icon.setOnTouchListener(this);
-            icon.setOnKeyListener(this);
-            icon.setOnFocusChangeListener(layout.mFocusHandlerView);
-            //FIXME 界面上所有字体要统一设置 此为暂时
-            icon.setTextColor(Color.BLACK);
-            //FIXME 根据需要在定怎么设置 暂时先设置成透明
-            //父控件还有背景 所以这里和其父控件要同时设置才能看到效果
-            //父控件layout 见939行
-            icon.setBackgroundColor(Color.TRANSPARENT);
-            int index = i - startIndex;
-            int x = index % mCellCountX;
-            int y = index / mCellCountX;
-            if (isRtl) {
-                x = mCellCountX - x - 1;
-            }
-            layout.addViewToCellLayout(icon, -1, i, new CellLayout.LayoutParams(x,y, 1,1), false);
-
-            items.add(info);
-            images.add(info.iconBitmap);
-        }
-
-        enableHwLayersOnVisiblePages();
+//        // ensure that we have the right number of items on the pages
+//        final boolean isRtl = isLayoutRtl();
+//        int numCells = mCellCountX * mCellCountY;
+//        int startIndex = page * numCells;
+//        int endIndex = Math.min(startIndex + numCells, mApps.size());
+//        AppsCustomizeCellLayout layout = (AppsCustomizeCellLayout) getPageAt(page);
+//
+//        layout.removeAllViewsOnPage();
+//        ArrayList<Object> items = new ArrayList<Object>();
+//        ArrayList<Bitmap> images = new ArrayList<Bitmap>();
+//        for (int i = startIndex; i < endIndex; ++i) {
+//            AppInfo info = mApps.get(i);
+//            BubbleTextView icon = (BubbleTextView) mLayoutInflater.inflate(
+//                    R.layout.apps_customize_application, layout, false);
+//            icon.applyFromApplicationInfo(info);
+//            icon.setOnClickListener(mLauncher);
+//            icon.setOnLongClickListener(this);
+//            icon.setOnTouchListener(this);
+//            icon.setOnKeyListener(this);
+//            icon.setOnFocusChangeListener(layout.mFocusHandlerView);
+//            //FIXME 界面上所有字体要统一设置 此为暂时
+//            icon.setTextColor(Color.BLACK);
+//            //FIXME 根据需要在定怎么设置 暂时先设置成透明
+//            //父控件还有背景 所以这里和其父控件要同时设置才能看到效果
+//            //父控件layout 见939行
+//            icon.setBackgroundColor(Color.TRANSPARENT);
+//            int index = i - startIndex;
+//            int x = index % mCellCountX;
+//            int y = index / mCellCountX;
+//            if (isRtl) {
+//                x = mCellCountX - x - 1;
+//            }
+//            layout.addViewToCellLayout(icon, -1, i, new CellLayout.LayoutParams(x,y, 1,1), false);
+//
+//            items.add(info);
+//            images.add(info.iconBitmap);
+//        }
+//
+//        enableHwLayersOnVisiblePages();
     }
 
     /**
@@ -1365,6 +1366,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
                 setupPage(layout);
                 addView(layout, new PagedView.LayoutParams(LayoutParams.MATCH_PARENT,
                         LayoutParams.MATCH_PARENT));
+
             }
         } else if (mContentType == ContentType.Widgets) {
             for (int j = 0; j < mNumWidgetPages; ++j) {
@@ -1410,7 +1412,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         enableHwLayersOnVisiblePages();
     }
 
-    private void enableHwLayersOnVisiblePages() {
+    public void enableHwLayersOnVisiblePages() {
         final int screenCount = getChildCount();
 
         getVisiblePages(mTempVisiblePagesRange);
@@ -1685,6 +1687,9 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     private DropTarget.DragEnforcer mDragEnforcer;
     /** Is the user is dragging an item near the edge of a page? */
     private boolean mInScrollArea = false;
+
+    private HashMap<Long, AppsCustomizeCellLayout> mAllAppsScreens = new HashMap<Long, AppsCustomizeCellLayout>();
+    private ArrayList<Long> mScreenOrder = new ArrayList<Long>();
 
     @Override
     public boolean isDropEnabled() {
@@ -2417,6 +2422,125 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         for (int i = 0; i < getChildCount(); i++) {
             CellLayout child = (CellLayout) getChildAt(i);
             child.setBackgroundAlphaMultiplier(a);
+        }
+    }
+
+    public void addExtraEmptyScreenOnDrag() {
+        // Log to disk
+        Launcher.addDumpLog(TAG, "11683562 - addExtraEmptyScreenOnDrag()", true);
+
+        boolean lastChildOnScreen = false;
+        boolean childOnFinalScreen = false;
+
+        // Cancel any pending removal of empty screen
+//        mRemoveEmptyScreenRunnable = null;
+
+        if (mDragSourceInternal != null) {
+            if (mDragSourceInternal.getChildCount() == 1) {
+                lastChildOnScreen = true;
+            }
+            CellLayout cl = (CellLayout) mDragSourceInternal.getParent();
+            if (indexOfChild(cl) == getChildCount() - 1) {
+                childOnFinalScreen = true;
+            }
+        }
+
+        // If this is the last item on the final screen
+        if (lastChildOnScreen && childOnFinalScreen) {
+            return;
+        }
+        if (!mAllAppsScreens.containsKey(Workspace.EXTRA_EMPTY_SCREEN_ID)) {
+            insertNewAllAppsScreen(Workspace.EXTRA_EMPTY_SCREEN_ID);
+        }
+    }
+
+    public boolean addExtraEmptyScreen() {
+        // Log to disk
+        Launcher.addDumpLog(TAG, "11683562 - addExtraEmptyScreen()", true);
+
+        if (!mAllAppsScreens.containsKey(Workspace.EXTRA_EMPTY_SCREEN_ID)) {
+            insertNewAllAppsScreen(Workspace.EXTRA_EMPTY_SCREEN_ID);
+            return true;
+        }
+        return false;
+    }
+
+    public long insertNewAllAppsScreenBeforeEmptyScreen(long screenId) {
+        // Find the index to insert this view into.  If the empty screen exists, then
+        // insert it before that.
+        int insertIndex = mScreenOrder.indexOf(Workspace.EXTRA_EMPTY_SCREEN_ID);
+        if (insertIndex < 0) {
+            insertIndex = mScreenOrder.size();
+        }
+        return insertNewAllAppsScreen(screenId, insertIndex);
+    }
+
+    public long insertNewAllAppsScreen(long screenId) {
+        return insertNewAllAppsScreen(screenId, getChildCount());
+    }
+
+    public long insertNewAllAppsScreen(long screenId, int insertIndex) {
+        // Log to disk
+        Launcher.addDumpLog(TAG, "11683562 - insertNewWorkspaceScreen(): " + screenId +
+                " at index: " + insertIndex, true);
+
+        if (mAllAppsScreens.containsKey(screenId)) {
+            throw new RuntimeException("Screen id " + screenId + " already exists!");
+        }
+
+        AppsCustomizeCellLayout layout = new AppsCustomizeCellLayout(getContext());
+        setupPage(layout);
+        mAllAppsScreens.put(screenId, layout);
+        mScreenOrder.add(insertIndex, screenId);
+        addView(layout, insertIndex, new PagedView.LayoutParams(LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT));
+        return screenId;
+    }
+
+    // At bind time, we use the rank (screenId) to compute x and y for hotseat items.
+    // See implementation for parameter definition.
+    void addInScreenFromBind(View child, long screenId, int x, int y,
+                             int spanX, int spanY) {
+        AppsCustomizeCellLayout layout = getScreenWithId(screenId);
+        if(layout == null) {
+            new Throwable().printStackTrace();
+            return;
+        }
+
+        if (screenId == Workspace.EXTRA_EMPTY_SCREEN_ID) {
+            // This should never happen
+            throw new RuntimeException("Screen id should not be EXTRA_EMPTY_SCREEN_ID");
+        }
+
+        ItemInfo info = (ItemInfo) child.getTag();
+        int childId = mLauncher.getViewIdForItem(info);
+        boolean markCellsAsOccupied = !(child instanceof Folder);
+        layout.addViewToCellLayout(child, -1, childId, new CellLayout.LayoutParams(x,y, 1,1), markCellsAsOccupied);
+
+
+        if (!(child instanceof Folder)) {
+            child.setHapticFeedbackEnabled(false);
+            child.setOnLongClickListener(mLongClickListener);
+        }
+        if (child instanceof DropTarget) {
+            mDragController.addDropTarget((DropTarget) child);
+        }
+
+    }
+
+    public AppsCustomizeCellLayout getScreenWithId(long screenId) {
+        AppsCustomizeCellLayout layout = mAllAppsScreens.get(screenId);
+        return layout;
+    }
+
+    /**
+     * remove 所有AppsCustomizeCellLayout的所有View
+     */
+    public void removeAllViews(){
+        int count = getChildCount();
+        for(int i = 0;i<count;i++) {
+            AppsCustomizeCellLayout layout = (AppsCustomizeCellLayout) getPageAt(i);
+            layout.removeAllViewsOnPage();
         }
     }
 
