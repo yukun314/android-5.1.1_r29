@@ -120,7 +120,7 @@ public class LauncherExtension extends Launcher {
         }
 
         @Override
-        public void bindAllApplications(ArrayList<AppInfo> apps) {
+        public void bindAllApplications(ArrayList<ItemInfo> apps) {
         }
 
         @Override

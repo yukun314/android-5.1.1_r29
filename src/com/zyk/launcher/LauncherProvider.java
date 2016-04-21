@@ -512,6 +512,7 @@ public class LauncherProvider extends ContentProvider {
                     "intent TEXT," +
                     "container INTEGER," +
                     "screen INTEGER," +
+                    "rank INTEGER," +
                     "cellX INTEGER," +
                     "cellY INTEGER," +
                     "spanX INTEGER," +

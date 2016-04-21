@@ -199,6 +199,8 @@ public class LauncherModel extends BroadcastReceiver
     private final LauncherAppsCompat mLauncherApps;
     private final UserManagerCompat mUserManager;
 
+    public boolean isFirst = false;//true  第一次启动(加载数据)
+
     public interface Callbacks {
         /**
          * 当Launcher.java类的Activity处于onPause的时候，如果重新恢复，
@@ -249,7 +251,7 @@ public class LauncherModel extends BroadcastReceiver
          *所有应用列表接着APP图标数据
          * 把所有ApplicationInfo加载到appcustomizeContent里面（AppsCustomizePagedView）
          */
-        public void bindAllApplications(ArrayList<AppInfo> apps);
+        public void bindAllApplications(ArrayList<ItemInfo> apps);
         /**
          *通知Launcher新安装了一个APP，更新数据
          * 等待onResume时，把app list加入到appsCustomizeContent
@@ -1120,6 +1122,7 @@ public class LauncherModel extends BroadcastReceiver
 
         item.id = LauncherAppState.getLauncherProvider().generateNewItemId();
         values.put(LauncherSettings.Allapps._ID, item.id);
+        values.put(LauncherSettings.Allapps.RANK, item.rank);
         values.put(LauncherSettings.Allapps.CELLX, item.cellX);
         values.put(LauncherSettings.Allapps.CELLY, item.cellY);
         values.put(LauncherSettings.Allapps.ITEM_TYPE, item.itemType);
@@ -3028,11 +3031,11 @@ public class LauncherModel extends BroadcastReceiver
             //FIXME
             //在这里判断如果是第一次时 走原来的流程(修改绑定部分 把位置信息更新到数据库)，
             //否则 按新方法来(按照workspace形式)
-            if(sAllAppsItemsIdMap.size() == 0 && sAllAppsScreens.size() == 0) {//第一次启动
+            System.out.println("开始加载数据");
+            if(isFirst) {//第一次启动
                 // shallow copy
                 @SuppressWarnings("unchecked")
-                final ArrayList<AppInfo> list
-                        = (ArrayList<AppInfo>) mBgAllAppsList.data.clone();
+                final ArrayList<ItemInfo> list  = (ArrayList<ItemInfo>) mBgAllAppsList.data.clone();
                 Runnable r = new Runnable() {
                     public void run() {
                         final long t = SystemClock.uptimeMillis();
@@ -3059,6 +3062,7 @@ public class LauncherModel extends BroadcastReceiver
                     orderedScreenIds.addAll(sAllAppsScreens);
                 }
                 //绑定屏幕
+
                 bindAllAppsScreens(oldCallbacks, orderedScreenIds);
                 //绑定allApps
                 Runnable r = new Runnable(){
@@ -3066,7 +3070,8 @@ public class LauncherModel extends BroadcastReceiver
                     public void run() {
                         Callbacks callbacks = tryGetCallbacks(oldCallbacks);
                         if (callbacks != null) {
-                            callbacks.bindAllAppItems(allAppsItems);
+//                            callbacks.bindAllAppItems(allAppsItems);
+                            callbacks.bindAllApplications(allAppsItems);
                         }
                     }
                 };
@@ -3115,6 +3120,7 @@ public class LauncherModel extends BroadcastReceiver
             final Cursor c = contentResolver.query(contentUri, null, null, null, null);
             if (c!= null && c.getCount() > 0) {
                 try {
+                    isFirst = false;
                     addAllAppsData(c);
                 } finally {
                     if (c != null) {
@@ -3122,8 +3128,8 @@ public class LauncherModel extends BroadcastReceiver
                     }
                 }
             } else {
+                isFirst = true;
                 final List<UserHandleCompat> profiles = mUserManager.getUserProfiles();
-
                 SharedPreferences prefs = mContext.getSharedPreferences(
                         LauncherAppState.getSharedPreferencesKey(), Context.MODE_PRIVATE);
                 for (UserHandleCompat user : profiles) {
@@ -3153,10 +3159,10 @@ public class LauncherModel extends BroadcastReceiver
                         LauncherActivityInfoCompat app = apps.get(i);
                         // This builds the icon bitmaps.
                         AppInfo itemInfo = new AppInfo(mContext, app, user, mIconCache, mLabelCache);
-                        itemInfo.container = LauncherSettings.Allapps.CONTAINER_ALLAPPS;
+
                         mBgAllAppsList.add(itemInfo);
                         mBgAllAppsList.allApps.add(itemInfo);
-                        addAllAppsItemToDatabase(mContext, itemInfo,false);
+//                        addAllAppsItemToDatabase(mContext, itemInfo,false);
                     }
 
                     if (ADD_MANAGED_PROFILE_SHORTCUTS && !user.equals(UserHandleCompat.myUserHandle())) {
@@ -3551,7 +3557,7 @@ public class LauncherModel extends BroadcastReceiver
 
                 // Remove any empty screens
                 ArrayList<Long> unusedScreens = new ArrayList<Long>(sAllAppsScreens);
-                for (ItemInfo item: sBgItemsIdMap.values()) {
+                for (ItemInfo item: sAllAppsItemsIdMap.values()) {
                     long screenId = item.screenId;
                     if (item.container == LauncherSettings.Allapps.CONTAINER_ALLAPPS &&
                             unusedScreens.contains(screenId)) {
@@ -4542,10 +4548,10 @@ public class LauncherModel extends BroadcastReceiver
         return folderInfo;
     }
 
-    public static final Comparator<AppInfo> getAppNameComparator() {
+    public static final Comparator<ItemInfo> getAppNameComparator() {
         final Collator collator = Collator.getInstance();
-        return new Comparator<AppInfo>() {
-            public final int compare(AppInfo a, AppInfo b) {
+        return new Comparator<ItemInfo>() {
+            public final int compare(ItemInfo a, ItemInfo b) {
                 if (a.user.equals(b.user)) {
                     int result = collator.compare(a.title.toString().trim(),
                             b.title.toString().trim());

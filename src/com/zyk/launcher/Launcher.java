@@ -4199,6 +4199,10 @@ public class Launcher extends Activity
 
     @Override
     public void bindAllAppsScreens(ArrayList<Long> orderedScreenIds) {
+        if(mAppsCustomizeContent != null) {
+            mAppsCustomizeContent.onPackagesUpdated(
+                    LauncherModel.getSortedWidgetsAndShortcuts(this));
+        }
         bindAddAllAppsScreens(orderedScreenIds);
 
         // If there are no screens, we need to have an empty screen
@@ -4416,52 +4420,58 @@ public class Launcher extends Activity
      * Implementation of the method from LauncherModel.Callbacks.
      */
     public void bindAllAppItems(final ArrayList<ItemInfo> allApps) {
-        Runnable r = new Runnable() {
-            public void run() {
-                bindAllAppItems(allApps);
-            }
-        };
-        if (waitUntilResume(r)) {
-            return;
-        }
-//FIXME 实际绑定的实现
-        mAppsCustomizeContent.removeAllViews();
-        int count = allApps.size();
-        for(int i = 0;i<count;i++) {
-            ItemInfo item = allApps.get(i);
-            switch (item.itemType) {
-                case LauncherSettings.Allapps.ITEM_TYPE_APPLICATION:
-                case LauncherSettings.Allapps.ITEM_TYPE_SHORTCUT:
-                    AppInfo info = (AppInfo) item;
-                    View shortcut = createAllApp(info);
-                    CellLayout cl = mAppsCustomizeContent.getScreenWithId(item.screenId);
-                    if (cl != null && cl.isOccupied(item.cellX, item.cellY)) {
-                        View v = cl.getChildAt(item.cellX, item.cellY);
-                        Object tag = v.getTag();
-                        String desc = "Collision while binding AllApps item: " + item
-                                + ". Collides with " + tag;
-                        if (LauncherAppState.isDogfoodBuild()) {
-                            throw (new RuntimeException(desc));
-                        } else {
-                            Log.d(TAG, desc);
-                        }
-                    }
-                    mAppsCustomizeContent.addInScreenFromBind(shortcut, item.screenId, item.cellX,
-                            item.cellY, 1, 1);
-                    break;
-                case LauncherSettings.Allapps.ITEM_TYPE_FOLDER:
-                    FolderIcon newFolder = FolderIcon.fromXml(R.layout.folder_icon, this,
-                            mAppsCustomizeContent.getScreenWithId(item.screenId),
-                            (FolderInfo) item, mIconCache);
-                    mAppsCustomizeContent.addInScreenFromBind(newFolder, item.screenId, item.cellX,
-                            item.cellY, 1, 1);
-                    break;
-                default:
-                    throw new RuntimeException("Invalid Item Type");
-            }
-        }
-        mAppsCustomizeContent.enableHwLayersOnVisiblePages();
-        mAppsCustomizeContent.requestLayout();
+//        Runnable r = new Runnable() {
+//            public void run() {
+//                bindAllAppItems(allApps);
+//            }
+//        };
+//        if (waitUntilResume(r)) {
+//            return;
+//        }
+////FIXME 实际绑定的实现
+//        mAppsCustomizeContent.removeAllViews();
+//        if (mAppsCustomizeContent != null) {
+//            mAppsCustomizeContent.setApps(allApps);
+//        }
+//        if (mLauncherCallbacks != null) {
+//            mLauncherCallbacks.bindAllApplications(allApps);
+//        }
+//        int count = allApps.size();
+//        for(int i = 0;i<count;i++) {
+//            ItemInfo item = allApps.get(i);
+//            switch (item.itemType) {
+//                case LauncherSettings.Allapps.ITEM_TYPE_APPLICATION:
+//                case LauncherSettings.Allapps.ITEM_TYPE_SHORTCUT:
+//                    AppInfo info = (AppInfo) item;
+//                    View shortcut = createAllApp(info);
+//                    CellLayout cl = mAppsCustomizeContent.getScreenWithId(item.screenId);
+//                    if (cl != null && cl.isOccupied(item.cellX, item.cellY)) {
+//                        View v = cl.getChildAt(item.cellX, item.cellY);
+//                        Object tag = v.getTag();
+//                        String desc = "Collision while binding AllApps item: " + item
+//                                + ". Collides with " + tag;
+//                        if (LauncherAppState.isDogfoodBuild()) {
+//                            throw (new RuntimeException(desc));
+//                        } else {
+//                            Log.d(TAG, desc);
+//                        }
+//                    }
+//                    mAppsCustomizeContent.addInScreenFromBind(shortcut, item.screenId, item.cellX,
+//                            item.cellY, 1, 1);
+//                    break;
+//                case LauncherSettings.Allapps.ITEM_TYPE_FOLDER:
+//                    FolderIcon newFolder = FolderIcon.fromXml(R.layout.folder_icon, this,
+//                            mAppsCustomizeContent.getScreenWithId(item.screenId),
+//                            (FolderInfo) item, mIconCache);
+//                    mAppsCustomizeContent.addInScreenFromBind(newFolder, item.screenId, item.cellX,
+//                            item.cellY, 1, 1);
+//                    break;
+//                default:
+//                    throw new RuntimeException("Invalid Item Type");
+//            }
+//        }
+//        mAppsCustomizeContent.enableHwLayersOnVisiblePages();
+//        mAppsCustomizeContent.requestLayout();
     }
 
 
@@ -4744,15 +4754,16 @@ public class Launcher extends Activity
      *
      * Implementation of the method from LauncherModel.Callbacks.
      */
-    public void bindAllApplications(final ArrayList<AppInfo> apps) {
+    public void bindAllApplications(final ArrayList<ItemInfo> apps) {
+        //FIXME if 应该执行不到吧
         if (LauncherAppState.isDisableAllApps()) {
-            if (mIntentsOnWorkspaceFromUpgradePath != null) {
-                if (LauncherModel.UPGRADE_USE_MORE_APPS_FOLDER) {
-                    getHotseat().addAllAppsFolder(mIconCache, apps,
-                            mIntentsOnWorkspaceFromUpgradePath, Launcher.this, mWorkspace);
-                }
-                mIntentsOnWorkspaceFromUpgradePath = null;
-            }
+//            if (mIntentsOnWorkspaceFromUpgradePath != null) {
+//                if (LauncherModel.UPGRADE_USE_MORE_APPS_FOLDER) {
+//                    getHotseat().addAllAppsFolder(mIconCache, apps,
+//                            mIntentsOnWorkspaceFromUpgradePath, Launcher.this, mWorkspace);
+//                }
+//                mIntentsOnWorkspaceFromUpgradePath = null;
+//            }
             if (mAppsCustomizeContent != null) {
                 mAppsCustomizeContent.onPackagesUpdated(
                         LauncherModel.getSortedWidgetsAndShortcuts(this));

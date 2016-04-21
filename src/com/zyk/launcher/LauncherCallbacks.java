@@ -49,7 +49,7 @@ public interface LauncherCallbacks {
     public void onLauncherProviderChange();
     public void finishBindingItems(final boolean upgradePath);
     public void onClickAllAppsButton(View v);
-    public void bindAllApplications(ArrayList<AppInfo> apps);
+    public void bindAllApplications(ArrayList<ItemInfo> apps);
     public void onClickFolderIcon(View v);
     public void onClickAppShortcut(View v);
     public void onClickPagedViewIcon(View v);

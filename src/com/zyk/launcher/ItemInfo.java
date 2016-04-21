@@ -16,6 +16,7 @@
 
 package com.zyk.launcher;
 
+import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -34,6 +35,10 @@ import java.util.Arrays;
  * Represents an item in the launcher.
  */
 public class ItemInfo {
+
+    ComponentName componentName;
+
+    public int rank = 0;
 
     /**
      * Intent extra to store the profile. Format: UserHandle

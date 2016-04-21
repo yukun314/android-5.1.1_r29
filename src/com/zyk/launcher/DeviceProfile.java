@@ -416,9 +416,11 @@ public class DeviceProfile {
             allAppsNumRows = (availableHeightPx - pageIndicatorHeightPx - hotseatBarHeightPx) /
                     (allAppsCellHeightPx + allAppsCellPaddingPx);
             allAppsNumRows = Math.max(minEdgeCellCount, Math.min(maxRows, allAppsNumRows));
+            System.out.println("DeciceProfile AllAppsNumRows:"+allAppsNumRows);
             allAppsNumCols = (availableWidthPx) /
                     (allAppsCellWidthPx + allAppsCellPaddingPx);
             allAppsNumCols = Math.max(minEdgeCellCount, Math.min(maxCols, allAppsNumCols));
+            System.out.println("DeciceProfile allAppsNumCols:"+allAppsNumCols);
         }
     }
 

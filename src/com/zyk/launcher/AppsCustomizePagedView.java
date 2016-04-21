@@ -22,6 +22,7 @@ import android.appwidget.AppWidgetHostView;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProviderInfo;
 import android.content.ComponentName;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -60,6 +61,7 @@ import com.zyk.launcher.util.Utils;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -183,7 +185,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     private int mSaveInstanceStateItemIndex = -1;
 
     // Content
-    private ArrayList<AppInfo> mApps;
+    private ArrayList<ItemInfo> mApps;
     private ArrayList<Object> mWidgets;
 
     // Caching
@@ -234,7 +236,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         super(context, attrs);
         mLayoutInflater = LayoutInflater.from(context);
         mPackageManager = context.getPackageManager();
-        mApps = new ArrayList<AppInfo>();
+        mApps = new ArrayList<ItemInfo>();
         mWidgets = new ArrayList<Object>();
         mIconCache = (LauncherAppState.getInstance()).getIconCache();
         mRunningTasks = new ArrayList<AppsCustomizeAsyncTask>();
@@ -361,6 +363,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     }
 
     protected void onDataReady(int width, int height) {
+        System.out.println("appsCustomizePagedView onDataReady");
         // Now that the data is ready, we can calculate the content width, the number of cells to
         // use for each page
         LauncherAppState app = LauncherAppState.getInstance();
@@ -383,8 +386,14 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         super.onLayout(changed, l, t, r, b);
+        System.out.println("appsCustomizePagedView onLayout 1 :"+(!isDataReady()));
         if (!isDataReady()) {
-            if ((LauncherAppState.isDisableAllApps() || !mApps.isEmpty()) && !mWidgets.isEmpty()) {
+            System.out.println("appsCustomizePagedView onLayout 2 :"+((LauncherAppState.isDisableAllApps() || (!mApps.isEmpty() || !mLauncher.getModel().isFirst)) && !mWidgets.isEmpty()));
+            System.out.println("appsCustomizePagedView onLayout 3 :"+LauncherAppState.isDisableAllApps());
+            System.out.println("appsCustomizePagedView onLayout 4 :"+(!mApps.isEmpty()));
+            System.out.println("appsCustomizePagedView onLayout 5 :"+(!mLauncher.getModel().isFirst));
+            System.out.println("appsCustomizePagedView onLayout 6 :"+(!mWidgets.isEmpty()));
+            if ((LauncherAppState.isDisableAllApps() || !mApps.isEmpty() ) && !mWidgets.isEmpty()) {
                 post(new Runnable() {
                     // This code triggers requestLayout so must be posted outside of the
                     // layout pass.
@@ -986,7 +995,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         }
     }
     private void setupPage(AppsCustomizeCellLayout layout) {
-//        layout.setGridSize(mCellCountX, mCellCountY);
+        layout.setGridSize(mCellCountX, mCellCountY);
 
         // Note: We force a measure here to get around the fact that when we do layout calculations
         // immediately after syncing, we don't have a proper width.  That said, we already know the
@@ -1019,45 +1028,130 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     }
 
     public void syncAppsPageItems(int page, boolean immediate) {
-//        // ensure that we have the right number of items on the pages
-//        final boolean isRtl = isLayoutRtl();
-//        int numCells = mCellCountX * mCellCountY;
-//        int startIndex = page * numCells;
-//        int endIndex = Math.min(startIndex + numCells, mApps.size());
-//        AppsCustomizeCellLayout layout = (AppsCustomizeCellLayout) getPageAt(page);
-//
-//        layout.removeAllViewsOnPage();
-//        ArrayList<Object> items = new ArrayList<Object>();
-//        ArrayList<Bitmap> images = new ArrayList<Bitmap>();
-//        for (int i = startIndex; i < endIndex; ++i) {
-//            AppInfo info = mApps.get(i);
-//            BubbleTextView icon = (BubbleTextView) mLayoutInflater.inflate(
-//                    R.layout.apps_customize_application, layout, false);
-//            icon.applyFromApplicationInfo(info);
-//            icon.setOnClickListener(mLauncher);
-//            icon.setOnLongClickListener(this);
-//            icon.setOnTouchListener(this);
-//            icon.setOnKeyListener(this);
-//            icon.setOnFocusChangeListener(layout.mFocusHandlerView);
-//            //FIXME 界面上所有字体要统一设置 此为暂时
-//            icon.setTextColor(Color.BLACK);
-//            //FIXME 根据需要在定怎么设置 暂时先设置成透明
-//            //父控件还有背景 所以这里和其父控件要同时设置才能看到效果
-//            //父控件layout 见939行
-//            icon.setBackgroundColor(Color.TRANSPARENT);
-//            int index = i - startIndex;
-//            int x = index % mCellCountX;
-//            int y = index / mCellCountX;
-//            if (isRtl) {
-//                x = mCellCountX - x - 1;
-//            }
-//            layout.addViewToCellLayout(icon, -1, i, new CellLayout.LayoutParams(x,y, 1,1), false);
-//
-//            items.add(info);
-//            images.add(info.iconBitmap);
-//        }
-//
-//        enableHwLayersOnVisiblePages();
+        ArrayList<ItemInfo> data = getPageData(page);
+        if(mLauncher.getModel().isFirst) {
+            // ensure that we have the right number of items on the pages
+            final boolean isRtl = isLayoutRtl();
+            int numCells = mCellCountX * mCellCountY;
+            int startIndex = page * numCells;
+            int endIndex = Math.min(startIndex + numCells, mApps.size());
+            AppsCustomizeCellLayout layout = (AppsCustomizeCellLayout) getPageAt(page);
+
+            layout.removeAllViewsOnPage();
+            ArrayList<Object> items = new ArrayList<Object>();
+            ArrayList<Bitmap> images = new ArrayList<Bitmap>();
+            for (int i = startIndex; i < endIndex; ++i) {
+                AppInfo info = (AppInfo)data.get(i);
+                View icon = createAllApp(R.layout.apps_customize_application,layout, info);
+                int index = i - startIndex;
+                int x = index % mCellCountX;
+                int y = index / mCellCountX;
+                if (isRtl) {
+                    x = mCellCountX - x - 1;
+                }
+//                layout.addViewToCellLayout(icon, -1, i, new CellLayout.LayoutParams(x, y, 1, 1), false);
+                addInScreenFromBind(icon, page, x, y, info, layout);
+                items.add(info);
+                images.add(info.iconBitmap);
+
+                info.screenId = page;
+                info.cellX = x;
+                info.cellY = y;
+                info.rank = i;
+                info.container = LauncherSettings.Allapps.CONTAINER_ALLAPPS;
+                LauncherModel.addAllAppsItemToDatabase(getContext(), info, false);
+            }
+
+            enableHwLayersOnVisiblePages();
+        } else {
+
+            int count = data.size();
+            for (int i = 0; i < count; i++) {
+                ItemInfo item = data.get(i);
+                AppsCustomizeCellLayout layout = (AppsCustomizeCellLayout) getScreenWithId(item.screenId);
+                switch (item.itemType) {
+                    case LauncherSettings.Allapps.ITEM_TYPE_APPLICATION:
+                    case LauncherSettings.Allapps.ITEM_TYPE_SHORTCUT:
+                        AppInfo info = (AppInfo) item;
+                        View shortcut = createAllApp(R.layout.apps_customize_application, layout, info);
+//                        CellLayout cl = getScreenWithId(item.screenId);
+//                        if (cl != null && cl.isOccupied(item.cellX, item.cellY)) {
+//                            View v = cl.getChildAt(item.cellX, item.cellY);
+//                            Object tag = v.getTag();
+//                            String desc = "Collision while binding AllApps item: " + item
+//                                    + ". Collides with " + tag;
+//                            if (LauncherAppState.isDogfoodBuild()) {
+//                               throw (new RuntimeException(desc));
+//                            } else {
+//                                Log.d(TAG, desc);
+//                            }
+//                        }
+                        addInScreenFromBind(shortcut, item.screenId, item.cellX, item.cellY, info, layout);
+//                        layout.addViewToCellLayout(shortcut, -1, i, new CellLayout.LayoutParams(info.cellX, info.cellY, 1, 1), false);
+                        break;
+                    case LauncherSettings.Allapps.ITEM_TYPE_FOLDER:
+                        FolderIcon newFolder = FolderIcon.fromXml(R.layout.folder_icon, mLauncher,
+                            layout,(FolderInfo) item, mIconCache);
+                        addInScreenFromBind(newFolder, item.screenId, item.cellX, item.cellY, item, layout);
+//                        layout.addViewToCellLayout(newFolder, -1, i, new CellLayout.LayoutParams(item.cellX, item.cellY, 1, 1), false);
+                        break;
+                    default:
+                    throw new RuntimeException("Invalid Item Type");
+                }
+            }
+        }
+    }
+
+    private Comparator<ItemInfo> comparator = new Comparator<ItemInfo>(){
+
+        @Override
+        public int compare(ItemInfo lhs, ItemInfo rhs) {
+            int rankl = lhs.rank;
+            int rankr = rhs.rank;
+            if(rankl < 0 && rankr >= 0) {
+                return rankr;
+            } else if(rankr < 0 && rankl >= 0) {
+                return rankl;
+            } else if(rankl <0 && rankr < 0) {
+                return lhs.title.toString().compareTo(rhs.title.toString());
+            } else {
+                return rankl - rankr;
+            }
+        }
+    };
+
+    private ArrayList<ItemInfo> getPageData(int page){
+        if(mLauncher.getModel().isFirst){
+            return mApps;
+        } else {
+            ArrayList<ItemInfo> data = new ArrayList<ItemInfo>();
+            int count = mApps.size();
+            for(int i = 0;i<count;i++) {
+                ItemInfo item = mApps.get(i);
+                if(item.screenId == page) {
+                    data.add(item);
+                }
+            }
+            Collections.sort(data,comparator);
+            return data;
+        }
+    }
+
+    private View createAllApp(int layoutResId, AppsCustomizeCellLayout parent, AppInfo info) {
+        BubbleTextView icon = (BubbleTextView) mLayoutInflater.inflate(layoutResId, parent, false);
+        icon.applyFromApplicationInfo(info);
+        icon.setOnClickListener(mLauncher);
+        icon.setOnLongClickListener(this);
+        icon.setOnTouchListener(this);
+        icon.setOnKeyListener(this);
+        icon.setOnFocusChangeListener(parent.mFocusHandlerView);
+        //FIXME 界面上所有字体要统一设置 此为暂时
+        icon.setTextColor(Color.BLACK);
+        //FIXME 根据需要在定怎么设置 暂时先设置成透明
+        //父控件还有背景 所以这里和其父控件要同时设置才能看到效果
+        //父控件layout
+        icon.setBackgroundColor(Color.TRANSPARENT);
+        return icon;
     }
 
     /**
@@ -1354,33 +1448,38 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     @Override
     public void syncPages() {
-        disablePagedViewAnimations();
+        if(mLauncher.getModel().isFirst) {
+            disablePagedViewAnimations();
 
-        removeAllViews();
-        cancelAllTasks();
+            removeAllViews();
+            cancelAllTasks();
 
-        Context context = getContext();
-        if (mContentType == ContentType.Applications) {
-            for (int i = 0; i < mNumAppsPages; ++i) {
-                AppsCustomizeCellLayout layout = new AppsCustomizeCellLayout(context);
-                setupPage(layout);
-                addView(layout, new PagedView.LayoutParams(LayoutParams.MATCH_PARENT,
-                        LayoutParams.MATCH_PARENT));
-
+            Context context = getContext();
+            if (mContentType == ContentType.Applications) {
+                for (int i = 0; i < mNumAppsPages; ++i) {
+                    AppsCustomizeCellLayout layout = new AppsCustomizeCellLayout(context);
+                    setupPage(layout);
+                    addView(layout, new PagedView.LayoutParams(LayoutParams.MATCH_PARENT,
+                            LayoutParams.MATCH_PARENT));
+                    ContentValues values = new ContentValues();
+                    values.put(LauncherSettings.AllAppScreens._ID, i);
+                    values.put(LauncherSettings.AllAppScreens.SCREEN_RANK, i);
+                    mLauncher.getModel().insertNewAllAppScreens(getContext(), values);
+                }
+            } else if (mContentType == ContentType.Widgets) {
+                for (int j = 0; j < mNumWidgetPages; ++j) {
+                    PagedViewGridLayout layout = new PagedViewGridLayout(context, mWidgetCountX,
+                            mWidgetCountY);
+                    setupPage(layout);
+                    addView(layout, new PagedView.LayoutParams(LayoutParams.MATCH_PARENT,
+                            LayoutParams.MATCH_PARENT));
+                }
+            } else {
+                throw new RuntimeException("Invalid ContentType");
             }
-        } else if (mContentType == ContentType.Widgets) {
-            for (int j = 0; j < mNumWidgetPages; ++j) {
-                PagedViewGridLayout layout = new PagedViewGridLayout(context, mWidgetCountX,
-                        mWidgetCountY);
-                setupPage(layout);
-                addView(layout, new PagedView.LayoutParams(LayoutParams.MATCH_PARENT,
-                        LayoutParams.MATCH_PARENT));
-            }
-        } else {
-            throw new RuntimeException("Invalid ContentType");
+
+            enablePagedViewAnimations();
         }
-
-        enablePagedViewAnimations();
     }
 
     @Override
@@ -1498,7 +1597,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         }
     }
 
-    public void setApps(ArrayList<AppInfo> list) {
+    public void setApps(ArrayList<ItemInfo> list) {
         if (!LauncherAppState.isDisableAllApps()) {
             mApps = list;
             Collections.sort(mApps, LauncherModel.getAppNameComparator());
@@ -1522,14 +1621,17 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
             updatePageCountsAndInvalidateData();
         }
     }
-    private int findAppByComponent(List<AppInfo> list, AppInfo item) {
+    private int findAppByComponent(List<ItemInfo> list, AppInfo item) {
         ComponentName removeComponent = item.intent.getComponent();
         int length = list.size();
         for (int i = 0; i < length; ++i) {
-            AppInfo info = list.get(i);
-            if (info.user.equals(item.user)
-                    && info.intent.getComponent().equals(removeComponent)) {
-                return i;
+            ItemInfo itemInfo = list.get(i);
+            if(itemInfo instanceof AppInfo) {
+                AppInfo info = (AppInfo)itemInfo;
+                if (info.user.equals(item.user)
+                        && info.intent.getComponent().equals(removeComponent)) {
+                    return i;
+                }
             }
         }
         return -1;
@@ -1581,8 +1683,8 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     public void dumpState() {
         // TODO: Dump information related to current list of Applications, Widgets, etc.
-        AppInfo.dumpApplicationInfoList(TAG, "mApps", mApps);
-        dumpAppWidgetProviderInfoList(TAG, "mWidgets", mWidgets);
+//        AppInfo.dumpApplicationInfoList(TAG, "mApps", mApps);
+//        dumpAppWidgetProviderInfoList(TAG, "mWidgets", mWidgets);
     }
 
     private void dumpAppWidgetProviderInfoList(String tag, String label,
@@ -2489,31 +2591,25 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         }
 
         AppsCustomizeCellLayout layout = new AppsCustomizeCellLayout(getContext());
-        setupPage(layout);
+
         mAllAppsScreens.put(screenId, layout);
         mScreenOrder.add(insertIndex, screenId);
         addView(layout, insertIndex, new PagedView.LayoutParams(LayoutParams.MATCH_PARENT,
                 LayoutParams.MATCH_PARENT));
+//        setupPage(layout);
         return screenId;
     }
 
     // At bind time, we use the rank (screenId) to compute x and y for hotseat items.
     // See implementation for parameter definition.
-    void addInScreenFromBind(View child, long screenId, int x, int y,
-                             int spanX, int spanY) {
-        AppsCustomizeCellLayout layout = getScreenWithId(screenId);
-        if(layout == null) {
-            new Throwable().printStackTrace();
-            return;
-        }
+    void addInScreenFromBind(View child, long screenId, int x, int y,ItemInfo itemInfo,AppsCustomizeCellLayout layout) {
 
         if (screenId == Workspace.EXTRA_EMPTY_SCREEN_ID) {
             // This should never happen
             throw new RuntimeException("Screen id should not be EXTRA_EMPTY_SCREEN_ID");
         }
 
-        ItemInfo info = (ItemInfo) child.getTag();
-        int childId = mLauncher.getViewIdForItem(info);
+        int childId = mLauncher.getViewIdForItem(itemInfo);
         boolean markCellsAsOccupied = !(child instanceof Folder);
         layout.addViewToCellLayout(child, -1, childId, new CellLayout.LayoutParams(x,y, 1,1), markCellsAsOccupied);
 

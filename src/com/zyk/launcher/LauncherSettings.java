@@ -178,6 +178,8 @@ public class LauncherSettings {
          */
         static final String CONTAINER = "container";
 
+        static final String RANK = "rank";
+
         /**
          * The icon is a resource identified by a package name and an integer id.
          */
