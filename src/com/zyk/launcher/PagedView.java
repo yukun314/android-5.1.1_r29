@@ -638,6 +638,7 @@ public abstract class PagedView extends ViewGroup implements ViewGroup.OnHierarc
      */
     @Override
     public void setOnLongClickListener(OnLongClickListener l) {
+        System.out.println("appsCustomizePagedView PagedView ");
         mLongClickListener = l;
         final int count = getPageCount();
         for (int i = 0; i < count; i++) {

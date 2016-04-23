@@ -363,7 +363,6 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     }
 
     protected void onDataReady(int width, int height) {
-        System.out.println("appsCustomizePagedView onDataReady");
         // Now that the data is ready, we can calculate the content width, the number of cells to
         // use for each page
         LauncherAppState app = LauncherAppState.getInstance();
@@ -386,14 +385,8 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         super.onLayout(changed, l, t, r, b);
-        System.out.println("appsCustomizePagedView onLayout 1 :"+(!isDataReady()));
         if (!isDataReady()) {
-            System.out.println("appsCustomizePagedView onLayout 2 :"+((LauncherAppState.isDisableAllApps() || (!mApps.isEmpty() || !mLauncher.getModel().isFirst)) && !mWidgets.isEmpty()));
-            System.out.println("appsCustomizePagedView onLayout 3 :"+LauncherAppState.isDisableAllApps());
-            System.out.println("appsCustomizePagedView onLayout 4 :"+(!mApps.isEmpty()));
-            System.out.println("appsCustomizePagedView onLayout 5 :"+(!mLauncher.getModel().isFirst));
-            System.out.println("appsCustomizePagedView onLayout 6 :"+(!mWidgets.isEmpty()));
-            if ((LauncherAppState.isDisableAllApps() || !mApps.isEmpty() ) && !mWidgets.isEmpty()) {
+            if ((LauncherAppState.isDisableAllApps() || !mApps.isEmpty() )) {// && !mWidgets.isEmpty()
                 post(new Runnable() {
                     // This code triggers requestLayout so must be posted outside of the
                     // layout pass.
@@ -404,6 +397,17 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
                         }
                     }
                 });
+            }
+        }
+    }
+
+    public void setAppsAfter() {
+        if (!isDataReady()) {
+            if ((LauncherAppState.isDisableAllApps() || !mApps.isEmpty())) {// && !mWidgets.isEmpty()
+                if (Utilities.isViewAttachedToWindow(AppsCustomizePagedView.this)) {
+                    setDataIsReady();
+                    onDataReady(getMeasuredWidth(), getMeasuredHeight());
+                }
             }
         }
     }
@@ -496,6 +500,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     @Override
     public boolean onLongClick(View v) {
+        System.out.println("appsCustomizePagedView onLongClick AppsCustomizePagedView");
         if(isLongClicked) {
             CellLayout.CellInfo longClickCellInfo = null;
             View itemUnderLongClick = null;
@@ -1027,7 +1032,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         }
     }
 
-    public void syncAppsPageItems(int page, boolean immediate) {
+    public void syncAppsPageItems(int page) {
         ArrayList<ItemInfo> data = getPageData(page);
         if(mLauncher.getModel().isFirst) {
             // ensure that we have the right number of items on the pages
@@ -1061,7 +1066,6 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
                 info.container = LauncherSettings.Allapps.CONTAINER_ALLAPPS;
                 LauncherModel.addAllAppsItemToDatabase(getContext(), info, false);
             }
-
             enableHwLayersOnVisiblePages();
         } else {
 
@@ -1069,6 +1073,8 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
             for (int i = 0; i < count; i++) {
                 ItemInfo item = data.get(i);
                 AppsCustomizeCellLayout layout = (AppsCustomizeCellLayout) getScreenWithId(item.screenId);
+                int x = i % mCellCountX;
+                int y = i / mCellCountX;
                 switch (item.itemType) {
                     case LauncherSettings.Allapps.ITEM_TYPE_APPLICATION:
                     case LauncherSettings.Allapps.ITEM_TYPE_SHORTCUT:
@@ -1086,13 +1092,13 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 //                                Log.d(TAG, desc);
 //                            }
 //                        }
-                        addInScreenFromBind(shortcut, item.screenId, item.cellX, item.cellY, info, layout);
+                        addInScreenFromBind(shortcut, item.screenId, x, y, info, layout);
 //                        layout.addViewToCellLayout(shortcut, -1, i, new CellLayout.LayoutParams(info.cellX, info.cellY, 1, 1), false);
                         break;
                     case LauncherSettings.Allapps.ITEM_TYPE_FOLDER:
                         FolderIcon newFolder = FolderIcon.fromXml(R.layout.folder_icon, mLauncher,
                             layout,(FolderInfo) item, mIconCache);
-                        addInScreenFromBind(newFolder, item.screenId, item.cellX, item.cellY, item, layout);
+                        addInScreenFromBind(newFolder, item.screenId, x, y, item, layout);
 //                        layout.addViewToCellLayout(newFolder, -1, i, new CellLayout.LayoutParams(item.cellX, item.cellY, 1, 1), false);
                         break;
                     default:
@@ -1120,7 +1126,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         }
     };
 
-    private ArrayList<ItemInfo> getPageData(int page){
+    public ArrayList<ItemInfo> getPageData(int page){
         if(mLauncher.getModel().isFirst){
             return mApps;
         } else {
@@ -1141,7 +1147,8 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         BubbleTextView icon = (BubbleTextView) mLayoutInflater.inflate(layoutResId, parent, false);
         icon.applyFromApplicationInfo(info);
         icon.setOnClickListener(mLauncher);
-        icon.setOnLongClickListener(this);
+//        icon.setOnLongClickListener(this);
+        icon.setOnLongClickListener(mLongClickListener);
         icon.setOnTouchListener(this);
         icon.setOnKeyListener(this);
         icon.setOnFocusChangeListener(parent.mFocusHandlerView);
@@ -1484,11 +1491,11 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     @Override
     public void syncPageItems(int page, boolean immediate) {
-        if (mContentType == ContentType.Widgets) {
-            syncWidgetPageItems(page, immediate);
-        } else {
-            syncAppsPageItems(page, immediate);
-        }
+//        if (mContentType == ContentType.Widgets) {
+//            syncWidgetPageItems(page, immediate);
+//        } else {
+//            syncAppsPageItems(page);
+//        }
     }
 
     // We want our pages to be z-ordered such that the further a page is to the left, the higher
@@ -1587,6 +1594,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
      * next onMeasure() pass, which will trigger an invalidatePageData() itself.
      */
     private void invalidateOnDataChange() {
+        System.out.println("appsCustomizePagedView isDataReady:"+isDataReady());
         if (!isDataReady()) {
             // The next layout pass will trigger data-ready if both widgets and apps are set, so
             // request a layout to trigger the page data when ready.
@@ -2602,7 +2610,8 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     // At bind time, we use the rank (screenId) to compute x and y for hotseat items.
     // See implementation for parameter definition.
-    void addInScreenFromBind(View child, long screenId, int x, int y,ItemInfo itemInfo,AppsCustomizeCellLayout layout) {
+    void addInScreenFromBind(View child, long screenId, int x, int y,
+                             ItemInfo itemInfo, AppsCustomizeCellLayout layout) {
 
         if (screenId == Workspace.EXTRA_EMPTY_SCREEN_ID) {
             // This should never happen

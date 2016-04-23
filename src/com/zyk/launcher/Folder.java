@@ -239,6 +239,7 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
     }
 
     public boolean onLongClick(View v) {
+        System.out.println("appsCustomizePagedView onLongclick Folder");
         // Return if global dragging is not enabled
         if (!mLauncher.isDraggingEnabled()) return true;
 

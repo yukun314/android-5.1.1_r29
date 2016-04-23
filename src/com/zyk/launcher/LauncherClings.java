@@ -124,6 +124,7 @@ class LauncherClings implements OnClickListener {
 
             @Override
             public boolean onLongClick(View v) {
+                System.out.println("appsCustomizePagedView onLongclick LauncherClings");
                 mLauncher.getWorkspace().enterOverviewMode();
                 dismissLongPressCling();
                 return true;

@@ -224,7 +224,7 @@ public class LauncherModel extends BroadcastReceiver
         public void bindItems(ArrayList<ItemInfo> shortcuts, int start, int end,
                               boolean forceAnimateIcons);
 
-        public void bindAllAppItems(ArrayList<ItemInfo> shortcuts);
+        public void bindAllAppItems(ArrayList<ItemInfo> shortcuts, List<Long> orderedScreenIds);
 
         public void bindScreens(ArrayList<Long> orderedScreenIds);
         public void bindAddScreens(ArrayList<Long> orderedScreenIds);
@@ -3031,7 +3031,6 @@ public class LauncherModel extends BroadcastReceiver
             //FIXME
             //在这里判断如果是第一次时 走原来的流程(修改绑定部分 把位置信息更新到数据库)，
             //否则 按新方法来(按照workspace形式)
-            System.out.println("开始加载数据");
             if(isFirst) {//第一次启动
                 // shallow copy
                 @SuppressWarnings("unchecked")
@@ -3041,7 +3040,7 @@ public class LauncherModel extends BroadcastReceiver
                         final long t = SystemClock.uptimeMillis();
                         final Callbacks callbacks = tryGetCallbacks(oldCallbacks);
                         if (callbacks != null) {
-                            callbacks.bindAllApplications(list);
+                            callbacks.bindAllAppItems(list, null);
                         }
                         if (DEBUG_LOADERS) {
                             Log.d(TAG, "bound all " + list.size() + " apps from cache in "
@@ -3070,8 +3069,8 @@ public class LauncherModel extends BroadcastReceiver
                     public void run() {
                         Callbacks callbacks = tryGetCallbacks(oldCallbacks);
                         if (callbacks != null) {
-//                            callbacks.bindAllAppItems(allAppsItems);
-                            callbacks.bindAllApplications(allAppsItems);
+//                            callbacks.bindAllApplications(allAppsItems);
+                            callbacks.bindAllAppItems(allAppsItems, orderedScreenIds);
                         }
                     }
                 };
@@ -3222,38 +3221,40 @@ public class LauncherModel extends BroadcastReceiver
                 try {
                     final int idIndex = c.getColumnIndexOrThrow(LauncherSettings.Favorites._ID);
                     final int intentIndex = c.getColumnIndexOrThrow
-                            (LauncherSettings.Favorites.INTENT);
+                            (LauncherSettings.Allapps.INTENT);
                     final int titleIndex = c.getColumnIndexOrThrow
-                            (LauncherSettings.Favorites.TITLE);
+                            (LauncherSettings.Allapps.TITLE);
                     final int iconTypeIndex = c.getColumnIndexOrThrow(
-                            LauncherSettings.Favorites.ICON_TYPE);
+                            LauncherSettings.Allapps.ICON_TYPE);
                     final int iconIndex = c.getColumnIndexOrThrow(LauncherSettings.Favorites.ICON);
                     final int iconPackageIndex = c.getColumnIndexOrThrow(
-                            LauncherSettings.Favorites.ICON_PACKAGE);
+                            LauncherSettings.Allapps.ICON_PACKAGE);
                     final int iconResourceIndex = c.getColumnIndexOrThrow(
-                            LauncherSettings.Favorites.ICON_RESOURCE);
+                            LauncherSettings.Allapps.ICON_RESOURCE);
                     final int containerIndex = c.getColumnIndexOrThrow(
-                            LauncherSettings.Favorites.CONTAINER);
+                            LauncherSettings.Allapps.CONTAINER);
                     final int itemTypeIndex = c.getColumnIndexOrThrow(
-                            LauncherSettings.Favorites.ITEM_TYPE);
+                            LauncherSettings.Allapps.ITEM_TYPE);
                     final int appWidgetIdIndex = c.getColumnIndexOrThrow(
-                            LauncherSettings.Favorites.APPWIDGET_ID);
+                            LauncherSettings.Allapps.APPWIDGET_ID);
                     final int appWidgetProviderIndex = c.getColumnIndexOrThrow(
-                            LauncherSettings.Favorites.APPWIDGET_PROVIDER);
+                            LauncherSettings.Allapps.APPWIDGET_PROVIDER);
                     final int screenIndex = c.getColumnIndexOrThrow(
-                            LauncherSettings.Favorites.SCREEN);
+                            LauncherSettings.Allapps.SCREEN_ID);
                     final int cellXIndex = c.getColumnIndexOrThrow
-                            (LauncherSettings.Favorites.CELLX);
+                            (LauncherSettings.Allapps.CELLX);
                     final int cellYIndex = c.getColumnIndexOrThrow
-                            (LauncherSettings.Favorites.CELLY);
+                            (LauncherSettings.Allapps.CELLY);
                     final int spanXIndex = c.getColumnIndexOrThrow
-                            (LauncherSettings.Favorites.SPANX);
+                            (LauncherSettings.Allapps.SPANX);
                     final int spanYIndex = c.getColumnIndexOrThrow(
-                            LauncherSettings.Favorites.SPANY);
+                            LauncherSettings.Allapps.SPANY);
                     final int restoredIndex = c.getColumnIndexOrThrow(
-                            LauncherSettings.Favorites.RESTORED);
+                            LauncherSettings.Allapps.RESTORED);
                     final int profileIdIndex = c.getColumnIndexOrThrow(
-                            LauncherSettings.Favorites.PROFILE_ID);
+                            LauncherSettings.Allapps.PROFILE_ID);
+                    final int rank = c.getColumnIndexOrThrow(
+                            LauncherSettings.Allapps.RANK);
 
                     final LauncherAppsCompat launcherApps = LauncherAppsCompat.getInstance(mContext);
                     final PackageManager manager = mContext.getPackageManager();
@@ -3432,6 +3433,7 @@ public class LauncherModel extends BroadcastReceiver
 
                                 if (info != null) {
                                     info.id = id;
+                                    info.rank = c.getInt(rank);
                                     info.intent = intent;
                                     container = c.getInt(containerIndex);
                                     info.container = container;
@@ -3477,6 +3479,7 @@ public class LauncherModel extends BroadcastReceiver
 
                                 folderInfo.title = c.getString(titleIndex);
                                 folderInfo.id = id;
+                                folderInfo.rank = c.getInt(rank);
                                 container = c.getInt(containerIndex);
                                 folderInfo.container = container;
                                 folderInfo.screenId = c.getInt(screenIndex);

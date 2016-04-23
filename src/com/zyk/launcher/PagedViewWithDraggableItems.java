@@ -112,6 +112,7 @@ public abstract class PagedViewWithDraggableItems extends PagedView
      */
     @Override
     public boolean onLongClick(View v) {
+        System.out.println("appsCustomizePagedView onLongclick PagedViewWithDraggableItems");
         // Return early if this is not initiated from a touch
         if (!v.isInTouchMode()) return false;
         // Return early if we are still animating the pages

@@ -1503,28 +1503,6 @@ public class Launcher extends Activity
         return favorite;
     }
 
-    View createAllApp(AppInfo info) {
-        return createAllApp(R.layout.apps_customize_application,
-                mAppsCustomizeContent.getScreenWithId(info.screenId), info);
-    }
-
-    View createAllApp(int layoutResId, AppsCustomizeCellLayout parent, AppInfo info) {
-        BubbleTextView icon = (BubbleTextView) mInflater.inflate(layoutResId, parent, false);
-        icon.applyFromApplicationInfo(info);
-        icon.setOnClickListener(this);
-        icon.setOnLongClickListener(mAppsCustomizeContent);
-        icon.setOnTouchListener(mAppsCustomizeContent);
-        icon.setOnKeyListener(mAppsCustomizeContent);
-//        icon.setOnFocusChangeListener(parent.mFocusHandlerView);
-        //FIXME 界面上所有字体要统一设置 此为暂时
-        icon.setTextColor(Color.BLACK);
-        //FIXME 根据需要在定怎么设置 暂时先设置成透明
-        //父控件还有背景 所以这里和其父控件要同时设置才能看到效果
-        //父控件layout 见939行
-        icon.setBackgroundColor(Color.TRANSPARENT);
-        return icon;
-    }
-
     /**
      * Add a shortcut to the workspace.
      *
@@ -3174,6 +3152,7 @@ public class Launcher extends Activity
     }
 
     public boolean onLongClick(View v) {
+        System.out.println("appsCustomizePagedView onLongClick on Launcher");
         if (!isDraggingEnabled()) return false;
         if (isWorkspaceLocked()) return false;
         if (mState != State.WORKSPACE) return false;
@@ -4414,64 +4393,40 @@ public class Launcher extends Activity
     }
 
 
+
     /**
      * Bind the items start-end from the list.
      *
      * Implementation of the method from LauncherModel.Callbacks.
      */
-    public void bindAllAppItems(final ArrayList<ItemInfo> allApps) {
-//        Runnable r = new Runnable() {
-//            public void run() {
-//                bindAllAppItems(allApps);
-//            }
-//        };
-//        if (waitUntilResume(r)) {
-//            return;
-//        }
-////FIXME 实际绑定的实现
-//        mAppsCustomizeContent.removeAllViews();
-//        if (mAppsCustomizeContent != null) {
-//            mAppsCustomizeContent.setApps(allApps);
-//        }
-//        if (mLauncherCallbacks != null) {
-//            mLauncherCallbacks.bindAllApplications(allApps);
-//        }
-//        int count = allApps.size();
-//        for(int i = 0;i<count;i++) {
-//            ItemInfo item = allApps.get(i);
-//            switch (item.itemType) {
-//                case LauncherSettings.Allapps.ITEM_TYPE_APPLICATION:
-//                case LauncherSettings.Allapps.ITEM_TYPE_SHORTCUT:
-//                    AppInfo info = (AppInfo) item;
-//                    View shortcut = createAllApp(info);
-//                    CellLayout cl = mAppsCustomizeContent.getScreenWithId(item.screenId);
-//                    if (cl != null && cl.isOccupied(item.cellX, item.cellY)) {
-//                        View v = cl.getChildAt(item.cellX, item.cellY);
-//                        Object tag = v.getTag();
-//                        String desc = "Collision while binding AllApps item: " + item
-//                                + ". Collides with " + tag;
-//                        if (LauncherAppState.isDogfoodBuild()) {
-//                            throw (new RuntimeException(desc));
-//                        } else {
-//                            Log.d(TAG, desc);
-//                        }
-//                    }
-//                    mAppsCustomizeContent.addInScreenFromBind(shortcut, item.screenId, item.cellX,
-//                            item.cellY, 1, 1);
-//                    break;
-//                case LauncherSettings.Allapps.ITEM_TYPE_FOLDER:
-//                    FolderIcon newFolder = FolderIcon.fromXml(R.layout.folder_icon, this,
-//                            mAppsCustomizeContent.getScreenWithId(item.screenId),
-//                            (FolderInfo) item, mIconCache);
-//                    mAppsCustomizeContent.addInScreenFromBind(newFolder, item.screenId, item.cellX,
-//                            item.cellY, 1, 1);
-//                    break;
-//                default:
-//                    throw new RuntimeException("Invalid Item Type");
-//            }
-//        }
-//        mAppsCustomizeContent.enableHwLayersOnVisiblePages();
-//        mAppsCustomizeContent.requestLayout();
+    public void bindAllAppItems(final ArrayList<ItemInfo> allApps, final List<Long> orderedScreenIds) {
+        Runnable r = new Runnable() {
+            public void run() {
+                bindAllAppItems(allApps, orderedScreenIds);
+            }
+        };
+        if (waitUntilResume(r)) {
+            return;
+        }
+
+        mAppsCustomizeContent.removeAllViews();
+        if (mAppsCustomizeContent != null) {
+            mAppsCustomizeContent.setApps(allApps);
+            mAppsCustomizeContent.setAppsAfter();
+            mAppsCustomizeContent.onPackagesUpdated(
+                    LauncherModel.getSortedWidgetsAndShortcuts(this));
+        }
+        if (mLauncherCallbacks != null) {
+            mLauncherCallbacks.bindAllApplications(allApps);
+        }
+
+        int page = orderedScreenIds.size();
+        for(int j=0;j<page;j++) {
+            mAppsCustomizeContent.syncAppsPageItems(j);
+            mAppsCustomizeContent.enableHwLayersOnVisiblePages();
+            mAppsCustomizeContent.requestLayout();
+        }
+
     }
 
 
