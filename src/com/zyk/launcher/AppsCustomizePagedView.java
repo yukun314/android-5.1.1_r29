@@ -231,6 +231,9 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     private float mMaxDistanceForFolderCreation;
 
     private float mTransitionProgress;
+    //以下两个变量都是保证第一次初始化时不重复把数据添加到数据库
+    private boolean syncPagesEnable = true;
+    private List<Integer> tempScreens = new ArrayList<Integer>();
 
     public AppsCustomizePagedView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -359,6 +362,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     private void updatePageCounts() {
         mNumWidgetPages = (int) Math.ceil(mWidgets.size() /
                 (float) (mWidgetCountX * mWidgetCountY));
+        System.out.println("AppsCustomizePagedView mCellCountx:"+mCellCountX+"  mCellCountY:"+mCellCountY);
         mNumAppsPages = (int) Math.ceil((float) mApps.size() / (mCellCountX * mCellCountY));
     }
 
@@ -369,6 +373,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         DeviceProfile grid = app.getDynamicGrid().getDeviceProfile();
         mCellCountX = (int) grid.allAppsNumCols;
         mCellCountY = (int) grid.allAppsNumRows;
+        System.out.println("AppsCustomizePagedView onDataReady");
         updatePageCounts();
 
         // Force a measure to update recalculate the gaps
@@ -1034,6 +1039,10 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     public void syncAppsPageItems(int page) {
         ArrayList<ItemInfo> data = getPageData(page);
+        int cv = data.size();
+        for(int i=0;i<cv;i++){
+            System.out.println("LauncherModel i:"+page+"  "+data.get(i));
+        }
         if(mLauncher.getModel().isFirst) {
             // ensure that we have the right number of items on the pages
             final boolean isRtl = isLayoutRtl();
@@ -1127,6 +1136,9 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     };
 
     public ArrayList<ItemInfo> getPageData(int page){
+        if(page ==2){
+            System.out.println("");
+        }
         if(mLauncher.getModel().isFirst){
             return mApps;
         } else {
@@ -1147,8 +1159,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         BubbleTextView icon = (BubbleTextView) mLayoutInflater.inflate(layoutResId, parent, false);
         icon.applyFromApplicationInfo(info);
         icon.setOnClickListener(mLauncher);
-//        icon.setOnLongClickListener(this);
-        icon.setOnLongClickListener(mLongClickListener);
+        icon.setOnLongClickListener(this);
         icon.setOnTouchListener(this);
         icon.setOnKeyListener(this);
         icon.setOnFocusChangeListener(parent.mFocusHandlerView);
@@ -1455,9 +1466,10 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     @Override
     public void syncPages() {
-        if(mLauncher.getModel().isFirst) {
+        //mLauncher.isAllAppInitEnable 配合syncPagesEnable 就是为了安装后第一次启动多次执行导致屏幕添加不正确
+        if(mLauncher.getModel().isFirst && mLauncher.isAllAppInitEnable && syncPagesEnable) {
+            syncPagesEnable = false;
             disablePagedViewAnimations();
-
             removeAllViews();
             cancelAllTasks();
 
@@ -1491,11 +1503,17 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     @Override
     public void syncPageItems(int page, boolean immediate) {
-//        if (mContentType == ContentType.Widgets) {
-//            syncWidgetPageItems(page, immediate);
-//        } else {
-//            syncAppsPageItems(page);
-//        }
+        if(mLauncher.getModel().isFirst && mLauncher.isAllAppInitEnable) {
+            if(tempScreens.indexOf(page) > -1){
+                return ;
+            }
+            tempScreens.add(page);
+            if (mContentType == ContentType.Widgets) {
+                syncWidgetPageItems(page, immediate);
+            } else {
+                syncAppsPageItems(page);
+            }
+        }
     }
 
     // We want our pages to be z-ordered such that the further a page is to the left, the higher
@@ -1594,7 +1612,6 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
      * next onMeasure() pass, which will trigger an invalidatePageData() itself.
      */
     private void invalidateOnDataChange() {
-        System.out.println("appsCustomizePagedView isDataReady:"+isDataReady());
         if (!isDataReady()) {
             // The next layout pass will trigger data-ready if both widgets and apps are set, so
             // request a layout to trigger the page data when ready.
@@ -2621,15 +2638,6 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         int childId = mLauncher.getViewIdForItem(itemInfo);
         boolean markCellsAsOccupied = !(child instanceof Folder);
         layout.addViewToCellLayout(child, -1, childId, new CellLayout.LayoutParams(x,y, 1,1), markCellsAsOccupied);
-
-
-        if (!(child instanceof Folder)) {
-            child.setHapticFeedbackEnabled(false);
-            child.setOnLongClickListener(mLongClickListener);
-        }
-        if (child instanceof DropTarget) {
-            mDragController.addDropTarget((DropTarget) child);
-        }
 
     }
 
