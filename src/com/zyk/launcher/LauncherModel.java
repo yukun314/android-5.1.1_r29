@@ -1262,6 +1262,22 @@ public class LauncherModel extends BroadcastReceiver
     }
 
     /**
+     * Removes all Screen items from the database
+     * @param context
+     * @param item
+     */
+    static void deleteAllScreens(Context context) {
+        final ContentResolver cr = context.getContentResolver();
+        Runnable r = new Runnable() {
+            public void run() {
+                final Uri uri = LauncherSettings.AllAppScreens.CONTENT_URI;
+                cr.delete(uri, null, null);
+            }
+        };
+        runOnWorkerThread(r);
+    }
+
+    /**
      * Update the order of the workspace screens in the database. The array list contains
      * a list of screen ids in the order that they should appear.
      */
@@ -3031,6 +3047,7 @@ public class LauncherModel extends BroadcastReceiver
             //FIXME
             //在这里判断如果是第一次时 走原来的流程(修改绑定部分 把位置信息更新到数据库)，
             //否则 按新方法来(按照workspace形式)
+            final ArrayList<Long> orderedScreenIds = new ArrayList<Long>();
             if(isFirst) {//第一次启动
                 // shallow copy
                 @SuppressWarnings("unchecked")
@@ -3040,7 +3057,7 @@ public class LauncherModel extends BroadcastReceiver
                         final long t = SystemClock.uptimeMillis();
                         final Callbacks callbacks = tryGetCallbacks(oldCallbacks);
                         if (callbacks != null) {
-                            callbacks.bindAllAppItems(list, null);
+                            callbacks.bindAllAppItems(list, orderedScreenIds);
                         }
                         if (DEBUG_LOADERS) {
                             Log.d(TAG, "bound all " + list.size() + " apps from cache in "
@@ -3054,7 +3071,7 @@ public class LauncherModel extends BroadcastReceiver
                 // Save a copy of all the bg-thread collections
                 final ArrayList<ItemInfo> allAppsItems = new ArrayList<ItemInfo>();
                 final HashMap<Long, FolderInfo> folders = new HashMap<Long, FolderInfo>();
-                final ArrayList<Long> orderedScreenIds = new ArrayList<Long>();
+
                 synchronized (sBgLock) {
                     allAppsItems.addAll(mBgAllAppsList.allApps);
                     folders.putAll(sAllAppsFolders);
@@ -3063,6 +3080,7 @@ public class LauncherModel extends BroadcastReceiver
                 //绑定屏幕
 
                 bindAllAppsScreens(oldCallbacks, orderedScreenIds);
+               int count =  allAppsItems.size();
                 //绑定allApps
                 Runnable r = new Runnable(){
                     @Override
@@ -3213,6 +3231,7 @@ public class LauncherModel extends BroadcastReceiver
         }
 
         private void addAllAppsData(Cursor c){
+            System.out.println("LauncherMode addAllAppsData");
             synchronized (sBgLock) {
                 final ArrayList<Long> itemsToRemove = new ArrayList<Long>();
                 final ArrayList<Long> restoredRows = new ArrayList<Long>();
@@ -3280,9 +3299,10 @@ public class LauncherModel extends BroadcastReceiver
                         boolean allowMissingTarget = false;
 
                         switch (itemType) {
-                            case LauncherSettings.Favorites.ITEM_TYPE_APPLICATION:
-                            case LauncherSettings.Favorites.ITEM_TYPE_SHORTCUT:
+                            case LauncherSettings.Allapps.ITEM_TYPE_APPLICATION:
+                            case LauncherSettings.Allapps.ITEM_TYPE_SHORTCUT:
                                 id = c.getLong(idIndex);
+                                System.out.println("LauncherMode shortcut:"+id);
                                 intentDescription = c.getString(intentIndex);
                                 long serialNumber = c.getInt(profileIdIndex);
                                 user = mUserManager.getUserForSerialNumber(serialNumber);
@@ -3476,7 +3496,7 @@ public class LauncherModel extends BroadcastReceiver
                             case LauncherSettings.Allapps.ITEM_TYPE_FOLDER:
                                 id = c.getLong(idIndex);
                                 FolderInfo folderInfo = findOrMakeFolder(sBgFolders, id);
-
+                                System.out.println("LauncherMode folder:"+id);
                                 folderInfo.title = c.getString(titleIndex);
                                 folderInfo.id = id;
                                 folderInfo.rank = c.getInt(rank);

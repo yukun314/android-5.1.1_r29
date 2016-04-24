@@ -268,6 +268,9 @@ public class Launcher extends Activity
 
     private FolderInfo mFolderInfo;
 
+    //FIXME 还不知道有什么作用 未用
+    private FolderInfo mAllAppFolderInfo;
+
     private Hotseat mHotseat;
     private ViewGroup mOverviewPanel;
 
@@ -310,6 +313,7 @@ public class Launcher extends Activity
     private static LocaleConfiguration sLocaleConfiguration = null;
 
     private static HashMap<Long, FolderInfo> sFolders = new HashMap<Long, FolderInfo>();
+    private static HashMap<Long, FolderInfo> sAllAppFolders = new HashMap<Long, FolderInfo>();
 
     private View.OnTouchListener mHapticFeedbackTouchListener;
 
@@ -352,6 +356,8 @@ public class Launcher extends Activity
     private Rect mRectForFolderAnimation = new Rect();
 
     private BubbleTextView mWaitingForResume;
+
+    public boolean isAllAppInitEnable = false;
 
     private Runnable mBuildLayersRunnable = new Runnable() {
         public void run() {
@@ -1299,7 +1305,7 @@ public class Launcher extends Activity
         if (savedState == null) {
             return;
         }
-
+        System.out.println("bindFolders restoreState 这里有文件夹的相关操作");
         State state = intToState(savedState.getInt(RUNTIME_STATE, State.WORKSPACE.ordinal()));
         if (state == State.APPS_CUSTOMIZE) {
             mOnResumeState = State.APPS_CUSTOMIZE;
@@ -2438,8 +2444,34 @@ public class Launcher extends Activity
         return newFolder;
     }
 
+    //FIXME 还没修改
+    FolderIcon addAllAppFolder(CellLayout layout, long container, final long screenId, int cellX,
+                         int cellY) {
+        final FolderInfo folderInfo = new FolderInfo();
+        folderInfo.title = getText(R.string.folder_name);
+
+        // Update the model
+        LauncherModel.addItemToDatabase(Launcher.this, folderInfo, container, screenId, cellX, cellY,
+                false);
+        sFolders.put(folderInfo.id, folderInfo);
+
+        // Create the view
+        FolderIcon newFolder =
+                FolderIcon.fromXml(R.layout.folder_icon, this, layout, folderInfo, mIconCache);
+        mWorkspace.addInScreen(newFolder, container, screenId, cellX, cellY, 1, 1,
+                isWorkspaceLocked());
+        // Force measure the new folder icon
+        CellLayout parent = mWorkspace.getParentCellLayoutForView(newFolder);
+        parent.getShortcutsAndWidgets().measureChild(newFolder);
+        return newFolder;
+    }
+
     void removeFolder(FolderInfo folder) {
         sFolders.remove(folder.id);
+    }
+
+    void removeAllAppFolder(FolderInfo folder) {
+        sAllAppFolders.remove(folder.id);
     }
 
     protected ComponentName getWallpaperPickerComponent() {
@@ -4392,8 +4424,6 @@ public class Launcher extends Activity
         workspace.requestLayout();
     }
 
-
-
     /**
      * Bind the items start-end from the list.
      *
@@ -4408,11 +4438,13 @@ public class Launcher extends Activity
         if (waitUntilResume(r)) {
             return;
         }
-
         mAppsCustomizeContent.removeAllViews();
         if (mAppsCustomizeContent != null) {
             mAppsCustomizeContent.setApps(allApps);
-            mAppsCustomizeContent.setAppsAfter();
+            isAllAppInitEnable = true;
+            if(!mModel.isFirst){
+                mAppsCustomizeContent.setAppsAfter();
+            }
             mAppsCustomizeContent.onPackagesUpdated(
                     LauncherModel.getSortedWidgetsAndShortcuts(this));
         }
@@ -4449,7 +4481,6 @@ public class Launcher extends Activity
     /**
      * Implementation of the method from LauncherModel.Callbacks.
      */
-    //FIXME 要修改 稍后
     public void bindAllAppsFolders(final HashMap<Long, FolderInfo> folders) {
         Runnable r = new Runnable() {
             public void run() {
@@ -4459,8 +4490,8 @@ public class Launcher extends Activity
         if (waitUntilResume(r)) {
             return;
         }
-        sFolders.clear();
-        sFolders.putAll(folders);
+        sAllAppFolders.clear();
+        sAllAppFolders.putAll(folders);
     }
 
     /**
