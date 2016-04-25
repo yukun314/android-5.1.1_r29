@@ -458,7 +458,6 @@ public class CellLayout extends ViewGroup {
         // The folder outer / inner ring image(s)
         LauncherAppState app = LauncherAppState.getInstance();
         DeviceProfile grid = app.getDynamicGrid().getDeviceProfile();
-        System.out.println("cellLayout mFolderOuterRings:"+mFolderOuterRings.size());
         for (int i = 0; i < mFolderOuterRings.size(); i++) {
             FolderRingAnimator fra = mFolderOuterRings.get(i);
 

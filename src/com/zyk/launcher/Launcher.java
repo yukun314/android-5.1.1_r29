@@ -4247,6 +4247,8 @@ public class Launcher extends Activity
         Launcher.addDumpLog(TAG, "11683562 - bindAddAllAppsScreens()", true);
         Launcher.addDumpLog(TAG, "11683562 -   orderedScreenIds: " +
                 TextUtils.join(", ", orderedScreenIds), true);
+
+        mAppsCustomizeContent.setOnDataReady();
         int count = orderedScreenIds.size();
         for (int i = 0; i < count; i++) {
             mAppsCustomizeContent.insertNewAllAppsScreenBeforeEmptyScreen(orderedScreenIds.get(i));
@@ -4442,9 +4444,6 @@ public class Launcher extends Activity
         if (mAppsCustomizeContent != null) {
             mAppsCustomizeContent.setApps(allApps);
             isAllAppInitEnable = true;
-            if(!mModel.isFirst){
-                mAppsCustomizeContent.setAppsAfter();
-            }
             mAppsCustomizeContent.onPackagesUpdated(
                     LauncherModel.getSortedWidgetsAndShortcuts(this));
         }

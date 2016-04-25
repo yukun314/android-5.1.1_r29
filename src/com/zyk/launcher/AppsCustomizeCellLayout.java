@@ -72,7 +72,6 @@ public class AppsCustomizeCellLayout extends CellLayout implements Page {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        System.out.println("cellLayout onDraw");
         super.onDraw(canvas);
     }
 }

@@ -362,7 +362,6 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
     private void updatePageCounts() {
         mNumWidgetPages = (int) Math.ceil(mWidgets.size() /
                 (float) (mWidgetCountX * mWidgetCountY));
-        System.out.println("AppsCustomizePagedView mCellCountx:"+mCellCountX+"  mCellCountY:"+mCellCountY);
         mNumAppsPages = (int) Math.ceil((float) mApps.size() / (mCellCountX * mCellCountY));
     }
 
@@ -373,7 +372,6 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         DeviceProfile grid = app.getDynamicGrid().getDeviceProfile();
         mCellCountX = (int) grid.allAppsNumCols;
         mCellCountY = (int) grid.allAppsNumRows;
-        System.out.println("AppsCustomizePagedView onDataReady");
         updatePageCounts();
 
         // Force a measure to update recalculate the gaps
@@ -406,14 +404,15 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         }
     }
 
-    public void setAppsAfter() {
+    public void setOnDataReady() {
         if (!isDataReady()) {
-            if ((LauncherAppState.isDisableAllApps() || !mApps.isEmpty())) {// && !mWidgets.isEmpty()
+            //该方法在初始化屏幕时被调用 此时还未给mApps赋值
+//            if ((LauncherAppState.isDisableAllApps() || !mApps.isEmpty())) {// && !mWidgets.isEmpty()
                 if (Utilities.isViewAttachedToWindow(AppsCustomizePagedView.this)) {
                     setDataIsReady();
                     onDataReady(getMeasuredWidth(), getMeasuredHeight());
                 }
-            }
+//            }
         }
     }
 
@@ -1157,7 +1156,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 
     private View createAllApp(int layoutResId, AppsCustomizeCellLayout parent, AppInfo info) {
         BubbleTextView icon = (BubbleTextView) mLayoutInflater.inflate(layoutResId, parent, false);
-        icon.applyFromApplicationInfo(info);
+        icon.applyFromApplicationInfo(info,false);
         icon.setOnClickListener(mLauncher);
         icon.setOnLongClickListener(this);
         icon.setOnTouchListener(this);
@@ -2616,12 +2615,11 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         }
 
         AppsCustomizeCellLayout layout = new AppsCustomizeCellLayout(getContext());
-
+        setupPage(layout);
         mAllAppsScreens.put(screenId, layout);
         mScreenOrder.add(insertIndex, screenId);
         addView(layout, insertIndex, new PagedView.LayoutParams(LayoutParams.MATCH_PARENT,
                 LayoutParams.MATCH_PARENT));
-//        setupPage(layout);
         return screenId;
     }
 

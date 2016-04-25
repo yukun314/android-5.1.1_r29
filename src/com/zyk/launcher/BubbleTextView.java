@@ -140,7 +140,7 @@ public class BubbleTextView extends TextView {
         }
     }
 
-    public void applyFromApplicationInfo(AppInfo info) {
+    public void applyFromApplicationInfo(AppInfo info, boolean isCheck) {
         LauncherAppState app = LauncherAppState.getInstance();
         DeviceProfile grid = app.getDynamicGrid().getDeviceProfile();
 
@@ -152,7 +152,13 @@ public class BubbleTextView extends TextView {
         if (info.contentDescription != null) {
             setContentDescription(info.contentDescription);
         }
-        setTag(info);
+        //FIXME 原来只有 setTag(info) 这一句
+        //原 checkItemInfo 会扔出错误
+        if(isCheck) {
+            setTag(info);
+        } else {
+            super.setTag(info);
+        }
     }
 
 
