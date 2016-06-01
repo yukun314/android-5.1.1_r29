@@ -1160,7 +1160,8 @@ public class LauncherProvider extends ContentProvider {
             }
 
             if (id == -1) {
-                throw new RuntimeException("Error: could not query max item id");
+//                throw new RuntimeException("Error: could not query max item id");
+                id = 1;
             }
             return id;
         }
