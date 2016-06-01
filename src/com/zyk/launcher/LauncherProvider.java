@@ -252,6 +252,15 @@ public class LauncherProvider extends ContentProvider {
         return mOpenHelper.generateNewItemId();
     }
 
+    /**
+     * 查询给定表的_id的最大值
+     * @param table
+     * @return
+     */
+    public long getItemId(String  table){
+        return mOpenHelper.getItemId(table) +1;
+    }
+
     public void updateMaxItemId(long id) {
         mOpenHelper.updateMaxItemId(id);
     }
@@ -384,6 +393,7 @@ public class LauncherProvider extends ContentProvider {
         private final Context mContext;
         private final AppWidgetHost mAppWidgetHost;
         private long mMaxItemId = -1;
+        private long mMaxAllappsItemId = -1;
         private long mMaxScreenId = -1;
 
         private boolean mNewDbCreated = false;
@@ -1128,6 +1138,30 @@ public class LauncherProvider extends ContentProvider {
                 throw new RuntimeException("Error: could not query max item id");
             }
 
+            return id;
+        }
+
+		/**
+         * 查询给定表的_id的最大值
+         * @param table
+         * @return
+         */
+        public long getItemId(String  table) {
+            Cursor c = getReadableDatabase().rawQuery("SELECT MAX(_id) FROM "+table, null);
+
+            // get the result
+            final int maxIdIndex = 0;
+            long id = -1;
+            if (c != null && c.moveToNext()) {
+                id = c.getLong(maxIdIndex);
+            }
+            if (c != null) {
+                c.close();
+            }
+
+            if (id == -1) {
+                throw new RuntimeException("Error: could not query max item id");
+            }
             return id;
         }
 

@@ -1118,9 +1118,7 @@ public class LauncherModel extends BroadcastReceiver
 
         final ContentValues values = new ContentValues();
         final ContentResolver cr = context.getContentResolver();
-        item.onAddToDatabase(context, values);
-
-        item.id = LauncherAppState.getLauncherProvider().generateNewItemId();
+//        item.onAddToDatabase(context, values);
         values.put(LauncherSettings.Allapps._ID, item.id);
         values.put(LauncherSettings.Allapps.RANK, item.rank);
         values.put(LauncherSettings.Allapps.CELLX, item.cellX);
@@ -1131,7 +1129,15 @@ public class LauncherModel extends BroadcastReceiver
         values.put(LauncherSettings.Allapps.SPANX, item.spanX);
         values.put(LauncherSettings.Allapps.SPANY, item.spanY);
         values.put(LauncherSettings.Allapps.TITLE, item.title.toString());
-        values.put(LauncherSettings.Allapps.INTENT, item.getIntent().toUri(0));
+        try {
+            values.put(LauncherSettings.Allapps.INTENT, item.getIntent().toUri(0));
+        }catch (RuntimeException re){
+            re.printStackTrace();
+        }
+        values.put(LauncherSettings.Favorites.CONTAINER, item.container);
+        values.put(LauncherSettings.Favorites.SPANX, 1);
+        values.put(LauncherSettings.Favorites.SPANY, 1);
+        values.put(LauncherSettings.Favorites.PROFILE_ID, item.getSerialNumber(context));
 //        values.put(LauncherSettings.Allapps., item.);
 
 
@@ -4579,7 +4585,15 @@ public class LauncherModel extends BroadcastReceiver
                     int result = collator.compare(a.title.toString().trim(),
                             b.title.toString().trim());
                     if (result == 0) {
-                        result = a.componentName.compareTo(b.componentName);
+                        if(a.componentName == null && b.componentName == null){
+                            result = 0;
+                        }else if(a.componentName != null && b.componentName != null){
+                            result = a.componentName.compareTo(b.componentName);
+                        } else if(a.componentName == null && b.componentName != null){
+                            result = -1;
+                        } else if(a.componentName != null && b.componentName == null){
+                            result = 1;
+                        }
                     }
                     return result;
                 } else {

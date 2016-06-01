@@ -36,7 +36,7 @@ import java.util.Arrays;
  */
 public class ItemInfo {
 
-    ComponentName componentName;
+    ComponentName componentName ;
 
     public int rank = 0;
 
@@ -173,6 +173,10 @@ public class ItemInfo {
             // We should never persist an item on the extra empty screen.
             throw new RuntimeException("Screen id should not be EXTRA_EMPTY_SCREEN_ID");
         }
+    }
+
+    public long getSerialNumber(Context context){
+        return UserManagerCompat.getInstance(context).getSerialNumberForUser(user);
     }
 
     void updateValuesWithCoordinates(ContentValues values, int cellX, int cellY) {

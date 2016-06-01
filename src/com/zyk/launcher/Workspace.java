@@ -2900,6 +2900,7 @@ public class Workspace extends SmoothPagedView
     boolean createUserFolderIfNecessary(View newView, long container, CellLayout target,
             int[] targetCell, float distance, boolean external, DragView dragView,
             Runnable postAnimationRunnable) {
+        System.out.println("createUserFolderIfNecessary:"+(distance > mMaxDistanceForFolderCreation));
         if (distance > mMaxDistanceForFolderCreation) return false;
         View v = target.getChildAt(targetCell[0], targetCell[1]);
 
@@ -2916,7 +2917,8 @@ public class Workspace extends SmoothPagedView
 
         boolean aboveShortcut = (v.getTag() instanceof ShortcutInfo);
         boolean willBecomeShortcut = (newView.getTag() instanceof ShortcutInfo);
-
+        System.out.println("aboveShortcut:"+aboveShortcut);
+        System.out.println("willBecomeShortcut:"+willBecomeShortcut);
         if (aboveShortcut && willBecomeShortcut) {
             ShortcutInfo sourceInfo = (ShortcutInfo) newView.getTag();
             ShortcutInfo destInfo = (ShortcutInfo) v.getTag();

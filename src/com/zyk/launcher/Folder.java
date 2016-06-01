@@ -641,6 +641,17 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
         }
     }
 
+    protected boolean findAndSetEmptyCells(AppInfo item) {
+        int[] emptyCell = new int[2];
+        if (mContent.findCellForSpan(emptyCell, item.spanX, item.spanY)) {
+            item.cellX = emptyCell[0];
+            item.cellY = emptyCell[1];
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     protected View createAndAddShortcut(ShortcutInfo item) {
         final BubbleTextView textView =
             (BubbleTextView) mInflater.inflate(R.layout.folder_application, this, false);
@@ -666,6 +677,36 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
         boolean insert = false;
         textView.setOnKeyListener(new FolderKeyEventListener());
         mContent.addViewToCellLayout(textView, insert ? 0 : -1, (int)item.id, lp, true);
+        System.out.println("createAndAddShortcut mContent.addView");
+        return textView;
+    }
+
+    protected View createAndAddShortcut(AppInfo item) {
+        final BubbleTextView textView =
+                (BubbleTextView) mInflater.inflate(R.layout.folder_application, this, false);
+//        textView.applyFromShortcutInfo(item, mIconCache, false);
+        textView.applyFromApplicationInfo(item,true);
+        textView.setOnClickListener(this);
+        textView.setOnLongClickListener(this);
+        textView.setOnFocusChangeListener(mFocusIndicatorHandler);
+
+        // We need to check here to verify that the given item's location isn't already occupied
+        // by another item.
+        if (mContent.getChildAt(item.cellX, item.cellY) != null || item.cellX < 0 || item.cellY < 0
+                || item.cellX >= mContent.getCountX() || item.cellY >= mContent.getCountY()) {
+            // This shouldn't happen, log it.
+            Log.e(TAG, "Folder order not properly persisted during bind");
+            if (!findAndSetEmptyCells(item)) {
+                return null;
+            }
+        }
+
+        CellLayout.LayoutParams lp =
+                new CellLayout.LayoutParams(item.cellX, item.cellY, item.spanX, item.spanY);
+        boolean insert = false;
+        textView.setOnKeyListener(new FolderKeyEventListener());
+        mContent.addViewToCellLayout(textView, insert ? 0 : -1, (int)item.id, lp, true);
+        System.out.println("createAndAddShortcut mContent.addView");
         return textView;
     }
 
@@ -1136,6 +1177,7 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
             }
             boolean insert = false;
             mContent.addViewToCellLayout(v, insert ? 0 : -1, (int)info.id, lp, true);
+            System.out.println("arrangeChildren mContent.addView");
         }
         mItemsInvalidated = true;
     }
@@ -1277,6 +1319,7 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
             si.cellX = lp.cellX = mEmptyCell[0];
             si.cellX = lp.cellY = mEmptyCell[1];
             mContent.addViewToCellLayout(currentDragView, -1, (int) si.id, lp, true);
+            System.out.println("onDrop mContent.addView");
         }
 
         if (d.dragView.hasDrawn()) {
@@ -1308,19 +1351,32 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
     // This is used so the item doesn't immediately appear in the folder when added. In one case
     // we need to create the illusion that the item isn't added back to the folder yet, to
     // to correspond to the animation of the icon back into the folder. This is
-    public void hideItem(ShortcutInfo info) {
+    public void hideItem(ItemInfo info) {
         View v = getViewForInfo(info);
         v.setVisibility(INVISIBLE);
     }
-    public void showItem(ShortcutInfo info) {
+    public void showItem(ItemInfo info) {
         View v = getViewForInfo(info);
         v.setVisibility(VISIBLE);
     }
 
-    //FIXME AppInfo 还未处理
     public void onAdd(ItemInfo info) {
         if(info instanceof ShortcutInfo) {
             ShortcutInfo item = (ShortcutInfo)info;
+            mItemsInvalidated = true;
+            // If the item was dropped onto this open folder, we have done the work associated
+            // with adding the item to the folder, as indicated by mSuppressOnAdd being set
+            if (mSuppressOnAdd) return;
+            if (!findAndSetEmptyCells(item)) {
+                // The current layout is full, can we expand it?
+                setupContentForNumItems(getItemCount() + 1);
+                findAndSetEmptyCells(item);
+            }
+            createAndAddShortcut(item);
+            LauncherModel.addOrMoveItemInDatabase(
+                    mLauncher, item, mInfo.id, 0, item.cellX, item.cellY);
+        } else if(info instanceof AppInfo){
+            AppInfo item = (AppInfo)info;
             mItemsInvalidated = true;
             // If the item was dropped onto this open folder, we have done the work associated
             // with adding the item to the folder, as indicated by mSuppressOnAdd being set
@@ -1354,10 +1410,26 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
             if (getItemCount() <= 1) {
                 replaceFolderWithFinalItem();
             }
+        } else if(info instanceof AppInfo) {
+            AppInfo item = (AppInfo)info;
+            mItemsInvalidated = true;
+            // If this item is being dragged from this open folder, we have already handled
+            // the work associated with removing the item, so we don't have to do anything here.
+            if (item == mCurrentDragInfo) return;
+            View v = getViewForInfo(item);
+            mContent.removeView(v);
+            if (mState == STATE_ANIMATING) {
+                mRearrangeOnClose = true;
+            } else {
+                setupContentForNumItems(getItemCount());
+            }
+            if (getItemCount() <= 1) {
+                replaceFolderWithFinalItem();
+            }
         }
     }
 
-    private View getViewForInfo(ShortcutInfo item) {
+    private View getViewForInfo(ItemInfo item) {
         for (int j = 0; j < mContent.getCountY(); j++) {
             for (int i = 0; i < mContent.getCountX(); i++) {
                 View v = mContent.getChildAt(i, j);

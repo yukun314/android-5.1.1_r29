@@ -236,6 +236,7 @@ public class Launcher extends Activity
     private static int sScreen = DEFAULT_SCREEN;
 
     private HashMap<Integer, Integer> mItemIdToViewId = new HashMap<Integer, Integer>();
+    private HashMap<Integer, Integer> mAllAppsItemIdToViewId = new HashMap<Integer, Integer>();
     private static final AtomicInteger sNextGeneratedId = new AtomicInteger(1);
 
     // How long to wait before the new-shortcut animation automatically pans the workspace
@@ -714,6 +715,17 @@ public class Launcher extends Activity
         }
         int viewId = generateViewId();
         mItemIdToViewId.put(itemId, viewId);
+        return viewId;
+    }
+
+    public int getAllAppsViewIdForItem(ItemInfo info) {
+        // This cast is safe given the > 2B range for int.
+        int itemId = (int) info.id;
+        if (mAllAppsItemIdToViewId.containsKey(itemId)) {
+            return mAllAppsItemIdToViewId.get(itemId);
+        }
+        int viewId = generateViewId();
+        mAllAppsItemIdToViewId.put(itemId, viewId);
         return viewId;
     }
 
@@ -2446,22 +2458,29 @@ public class Launcher extends Activity
 
     //FIXME 还没修改
     FolderIcon addAllAppFolder(CellLayout layout, long container, final long screenId, int cellX,
-                         int cellY) {
+                         int cellY,int rank) {
         final FolderInfo folderInfo = new FolderInfo();
-        folderInfo.title = getText(R.string.folder_name);
+//        folderInfo.title = getText(R.string.folder_name);
+        folderInfo.title = "文件夹";
 
+        folderInfo.screenId = screenId;
+        folderInfo.itemType = LauncherSettings.Allapps.ITEM_TYPE_FOLDER;
+        folderInfo.cellX = cellX;
+        folderInfo.cellY = cellY;
+        folderInfo.rank = rank;
+        folderInfo.container = container;
+        folderInfo.id = LauncherAppState.getLauncherProvider().getItemId(LauncherProvider.TABLE_ALLAPPS);
         // Update the model
-        LauncherModel.addItemToDatabase(Launcher.this, folderInfo, container, screenId, cellX, cellY,
-                false);
-        sFolders.put(folderInfo.id, folderInfo);
+        LauncherModel.addAllAppsItemToDatabase(Launcher.this, folderInfo,false);
+        sAllAppFolders.put(folderInfo.id, folderInfo);
 
         // Create the view
-        FolderIcon newFolder =
-                FolderIcon.fromXml(R.layout.folder_icon, this, layout, folderInfo, mIconCache);
-        mWorkspace.addInScreen(newFolder, container, screenId, cellX, cellY, 1, 1,
-                isWorkspaceLocked());
+        FolderIcon newFolder = FolderIcon.fromXml(R.layout.folder_icon, this, layout, folderInfo, mIconCache);
+//        mWorkspace.addInScreen(newFolder, container, screenId, cellX, cellY, 1, 1,
+//                isWorkspaceLocked());
+        mAppsCustomizeContent.addInScreen(newFolder, container, screenId, cellX, cellY, 1, 1, false);
         // Force measure the new folder icon
-        CellLayout parent = mWorkspace.getParentCellLayoutForView(newFolder);
+        CellLayout parent = mAppsCustomizeContent.getParentCellLayoutForView(newFolder);
         parent.getShortcutsAndWidgets().measureChild(newFolder);
         return newFolder;
     }

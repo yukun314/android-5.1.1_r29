@@ -7,7 +7,7 @@ package readme;
 public class ReadMe {
     /**
      *修改AllApps初始化数据 创建数据库完成， 默认加载从数据库
-     *
+     *正在处理 Folder类 onRemove 方法
      *
      *
      *

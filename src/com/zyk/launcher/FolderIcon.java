@@ -111,7 +111,7 @@ public class FolderIcon extends FrameLayout implements FolderListener {
 
     private PreviewItemDrawingParams mParams = new PreviewItemDrawingParams(0, 0, 0, 0);
     private PreviewItemDrawingParams mAnimParams = new PreviewItemDrawingParams(0, 0, 0, 0);
-    private ArrayList<ShortcutInfo> mHiddenItems = new ArrayList<ShortcutInfo>();
+    private ArrayList<ItemInfo> mHiddenItems = new ArrayList<ItemInfo>();
 
     private Alarm mOpenAlarm = new Alarm();
     private ItemInfo mDragInfo;
@@ -175,7 +175,6 @@ public class FolderIcon extends FrameLayout implements FolderListener {
         folder.setFolderIcon(icon);
         folder.bind(folderInfo);
         icon.mFolder = folder;
-
         icon.mFolderRingAnimator = new FolderRingAnimator(launcher, icon);
         folderInfo.addListener(icon);
 
@@ -338,6 +337,10 @@ public class FolderIcon extends FrameLayout implements FolderListener {
         mInfo.add(item);
     }
 
+    public void addItem(AppInfo item) {
+        mInfo.add(item);
+    }
+
     public void onDragEnter(Object dragInfo) {
         if (mFolder.isDestroyed() || !willAcceptItem((ItemInfo) dragInfo)) return;
         CellLayout.LayoutParams lp = (CellLayout.LayoutParams) getLayoutParams();
@@ -381,6 +384,24 @@ public class FolderIcon extends FrameLayout implements FolderListener {
     public void performCreateAnimation(final ShortcutInfo destInfo, final View destView,
             final ShortcutInfo srcInfo, final DragView srcView, Rect dstRect,
             float scaleRelativeToDragLayer, Runnable postAnimationRunnable) {
+
+        // These correspond two the drawable and view that the icon was dropped _onto_
+        Drawable animateDrawable = getTopDrawable((TextView) destView);
+        computePreviewDrawingParams(animateDrawable.getIntrinsicWidth(),
+                destView.getMeasuredWidth());
+
+        // This will animate the first item from it's position as an icon into its
+        // position as the first item in the preview
+        animateFirstItem(animateDrawable, INITIAL_ITEM_ANIMATION_DURATION, false, null);
+        addItem(destInfo);
+
+        // This will animate the dragView (srcView) into the new folder
+        onDrop(srcInfo, srcView, dstRect, scaleRelativeToDragLayer, 1, postAnimationRunnable, null);
+    }
+
+    public void performCreateAnimation(final AppInfo destInfo, final View destView,
+                                       final AppInfo srcInfo, final DragView srcView, Rect dstRect,
+                                       float scaleRelativeToDragLayer, Runnable postAnimationRunnable) {
 
         // These correspond two the drawable and view that the icon was dropped _onto_
         Drawable animateDrawable = getTopDrawable((TextView) destView);
@@ -463,6 +484,67 @@ public class FolderIcon extends FrameLayout implements FolderListener {
                     postAnimationRunnable, DragLayer.ANIMATION_END_DISAPPEAR, null);
             addItem(item);
             mHiddenItems.add(item);
+            mFolder.hideItem(item);
+            postDelayed(new Runnable() {
+                public void run() {
+                    mHiddenItems.remove(item);
+                    mFolder.showItem(item);
+                    invalidate();
+                }
+            }, DROP_IN_ANIMATION_DURATION);
+        } else {
+            addItem(item);
+        }
+    }
+
+    private void onDrop(final AppInfo item, DragView animateView, Rect finalRect,
+                        float scaleRelativeToDragLayer, int index, Runnable postAnimationRunnable,
+                        DragObject d) {
+        item.cellX = -1;
+        item.cellY = -1;
+
+        // Typically, the animateView corresponds to the DragView; however, if this is being done
+        // after a configuration activity (ie. for a Shortcut being dragged from AllApps) we
+        // will not have a view to animate
+        if (animateView != null) {
+            DragLayer dragLayer = mLauncher.getDragLayer();
+            Rect from = new Rect();
+            dragLayer.getViewRectRelativeToSelf(animateView, from);
+            Rect to = finalRect;
+            if (to == null) {
+                to = new Rect();
+                Workspace workspace = mLauncher.getWorkspace();
+                // Set cellLayout and this to it's final state to compute final animation locations
+                workspace.setFinalTransitionTransform((CellLayout) getParent().getParent());
+                float scaleX = getScaleX();
+                float scaleY = getScaleY();
+                setScaleX(1.0f);
+                setScaleY(1.0f);
+                scaleRelativeToDragLayer = dragLayer.getDescendantRectRelativeToSelf(this, to);
+                // Finished computing final animation locations, restore current state
+                setScaleX(scaleX);
+                setScaleY(scaleY);
+                workspace.resetTransitionTransform((CellLayout) getParent().getParent());
+            }
+
+            int[] center = new int[2];
+            float scale = getLocalCenterForIndex(index, center);
+            center[0] = (int) Math.round(scaleRelativeToDragLayer * center[0]);
+            center[1] = (int) Math.round(scaleRelativeToDragLayer * center[1]);
+
+            to.offset(center[0] - animateView.getMeasuredWidth() / 2,
+                    center[1] - animateView.getMeasuredHeight() / 2);
+
+            float finalAlpha = index < NUM_ITEMS_IN_PREVIEW ? 0.5f : 0f;
+
+            float finalScale = scale * scaleRelativeToDragLayer;
+            dragLayer.animateView(animateView, from, to, finalAlpha,
+                    1, 1, finalScale, finalScale, DROP_IN_ANIMATION_DURATION,
+                    new DecelerateInterpolator(2), new AccelerateInterpolator(2),
+                    postAnimationRunnable, DragLayer.ANIMATION_END_DISAPPEAR, null);
+            addItem(item);
+            mHiddenItems.add(item);
+            System.out.println("mFolder is null :"+(mFolder == null)+" id:"+this.getId());
             mFolder.hideItem(item);
             postDelayed(new Runnable() {
                 public void run() {
