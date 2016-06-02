@@ -2456,7 +2456,6 @@ public class Launcher extends Activity
         return newFolder;
     }
 
-    //FIXME 还没修改
     FolderIcon addAllAppFolder(CellLayout layout, long container, final long screenId, int cellX,
                          int cellY,int rank) {
         final FolderInfo folderInfo = new FolderInfo();
@@ -2481,6 +2480,7 @@ public class Launcher extends Activity
         mAppsCustomizeContent.addInScreen(newFolder, container, screenId, cellX, cellY, 1, 1, false);
         // Force measure the new folder icon
         CellLayout parent = mAppsCustomizeContent.getParentCellLayoutForView(newFolder);
+        //FIXME parent.getShortcutsAndWidgets() NullPointerException
         parent.getShortcutsAndWidgets().measureChild(newFolder);
         return newFolder;
     }

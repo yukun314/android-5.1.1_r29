@@ -1080,6 +1080,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
                 info.cellY = y;
                 info.rank = i;
                 info.container = LauncherSettings.Allapps.CONTAINER_ALLAPPS;
+                info.id = LauncherAppState.getLauncherProvider().getItemId(LauncherProvider.TABLE_ALLAPPS);
                 LauncherModel.addAllAppsItemToDatabase(getContext(), info, false);
             }
             enableHwLayersOnVisiblePages();
@@ -1863,12 +1864,10 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
         int snapScreen = -1;
         boolean resizeOnDrop = false;
         if (dragObject.dragSource != this) {
-            System.out.println("AppsCustomizePagedView onDrop dragSource != this");
             final int[] touchXY = new int[]{(int) mDragViewVisualCenter[0],
                     (int) mDragViewVisualCenter[1] };
 //            onDropExternal(touchXY, dragObject.dragInfo, dropTargetLayout, false, dragObject);
         } else if (mDragInfo != null) {
-            System.out.println("AppsCustomizePagedView onDrop mDragInfo != null");
             final View cell = mDragInfo.cell;
 
             Runnable resizeRunnable = null;
@@ -1890,19 +1889,19 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
                         mDragViewVisualCenter[1], spanX, spanY, dropTargetLayout, mTargetCell);
                 float distance = dropTargetLayout.getDistanceFromCell(mDragViewVisualCenter[0],
                         mDragViewVisualCenter[1], mTargetCell);
-
+                System.out.println("onDrop 新建文件夹之前");
                 // If the item being dropped is a shortcut and the nearest drop
                 // cell also contains a shortcut, then create a folder with the two shortcuts.
                 if (!mInScrollArea && createUserFolderIfNecessary(cell, container,
                         dropTargetLayout, mTargetCell, distance, false, dragObject.dragView, null)) {
                     return;
                 }
-
+                System.out.println("onDrop 更新文件夹之前");
                 if (addToExistingFolderIfNecessary(cell, dropTargetLayout, mTargetCell,
                         distance, dragObject, false)) {
                     return;
                 }
-
+                System.out.println("onDrop 更新文件夹之后");
                 // Aside from the special case where we're dropping a shortcut onto a shortcut,
                 // we need to find the nearest cell location that is vacant
                 ItemInfo item = (ItemInfo) dragObject.dragInfo;
@@ -1935,7 +1934,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
                     snapScreen = getPageIndexForScreenId(screenId);
                     snapToPage(snapScreen);
                 }
-
+                System.out.println("onDrop foundCell:"+foundCell);
                 if (foundCell) {
                     final ItemInfo info = (ItemInfo) cell.getTag();
                     if (hasMovedLayouts) {
@@ -1985,7 +1984,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
                             });
                         }
                     }
-
+                    System.out.println("onDrop 更新数据库");
                     LauncherModel.modifyItemInDatabase(mLauncher, info, container, screenId, lp.cellX,
                             lp.cellY, item.spanX, item.spanY);
                 } else {
@@ -2351,7 +2350,7 @@ public class AppsCustomizePagedView extends PagedViewWithDraggableItems implemen
 //        }
 
         mDragUtils.mIsDragOccuring = false;
-//        updateChildrenLayersEnabled(false);
+        updateChildrenLayersEnabled(false);
         mLauncher.unlockScreenOrientation(false);
 
         // Re-enable any Un/InstallShortcutReceiver and now process any queued items

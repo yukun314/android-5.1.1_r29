@@ -286,7 +286,7 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
         String newTitle = mFolderName.getText().toString();
         mInfo.setTitle(newTitle);
         LauncherModel.updateItemInDatabase(mLauncher, mInfo);
-
+        System.out.println("doneEditingFolderName mInfo:"+mInfo);
         if (commit) {
             sendCustomAccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED,
                     String.format(getContext().getString(R.string.folder_renamed), newTitle));
@@ -1395,6 +1395,7 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
     //FIXME 还未处理
     public void onRemove(ItemInfo info) {
         if(info instanceof ShortcutInfo) {
+            System.out.println("onRemove shortcutInfo");
             ShortcutInfo item = (ShortcutInfo)info;
             mItemsInvalidated = true;
             // If this item is being dragged from this open folder, we have already handled
@@ -1411,11 +1412,12 @@ public class Folder extends LinearLayout implements DragSource, View.OnClickList
                 replaceFolderWithFinalItem();
             }
         } else if(info instanceof AppInfo) {
+            System.out.println("onRemove appinfo");
             AppInfo item = (AppInfo)info;
             mItemsInvalidated = true;
             // If this item is being dragged from this open folder, we have already handled
             // the work associated with removing the item, so we don't have to do anything here.
-            if (item == mCurrentDragInfo) return;
+//            if (item == mCurrentDragInfo) return;
             View v = getViewForInfo(item);
             mContent.removeView(v);
             if (mState == STATE_ANIMATING) {

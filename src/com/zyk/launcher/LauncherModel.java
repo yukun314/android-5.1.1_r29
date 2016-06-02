@@ -697,6 +697,7 @@ public class LauncherModel extends BroadcastReceiver
         runOnWorkerThread(r);
     }
 
+    //FIXME 新建文件夹时 更新相关信息
     static void updateItemInDatabaseHelper(Context context, final ContentValues values,
             final ItemInfo item, final String callingFunction) {
         final long itemId = item.id;
@@ -742,6 +743,7 @@ public class LauncherModel extends BroadcastReceiver
         };
         runOnWorkerThread(r);
     }
+
 
     static void updateItemArrays(ItemInfo item, long itemId, StackTraceElement[] stackTrace) {
         // Lock on mBgLock *after* the db operation
